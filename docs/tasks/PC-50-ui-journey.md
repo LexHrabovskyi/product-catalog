@@ -20,7 +20,7 @@ One end-to-end journey proves the app's failure handling and the basket together
 - **R2. Release hygiene** (AC-028).
   - A Release build contains no scripted transport and no scenario code; check its symbols.
   - A Debug launch without `-scenario` uses the live transport.
-- **R3. Operator check** (AC-009). Launch an optimized Debug build with `-scenario large` and scroll from top to bottom by eye.
+- **R3. Operator check** (AC-009). Launch an optimized Debug build with `-scenario large`, scroll from top to bottom by eye, and watch memory stay flat in the Xcode gauge.
 
 ## Exit evidence
 

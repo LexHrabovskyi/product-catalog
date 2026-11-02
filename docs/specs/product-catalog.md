@@ -1,6 +1,6 @@
 # Technical Specification: Product catalog v1
 
-- Status: Confirmed by the operator, 2026-11-02
+- Status: Confirmed by the operator, 2026-11-02. Clarified after PC-10's review: §6 scenario notes and AC-009's manual check (D22).
 - Date: 2026-11-02
 - Decisions: [decisions.md](../decisions.md) D1–D10; [ADR-0001](../adr/0001-tca-modular-architecture.md), [ADR-0002](../adr/0002-concurrency-isolation.md), [ADR-0003](../adr/0003-networking-and-failure-policy.md), [ADR-0004](../adr/0004-shared-persisted-basket.md)
 
@@ -116,10 +116,10 @@ Debug builds accept a `-scenario <name>` launch argument. It swaps the live tran
 |---|---|
 | `journey` | The AC-027 script |
 | `large` | 1,200 synthetic products, paged like the API |
-| `slow` | Every response arrives after 4 s |
-| `offline` | Every request fails as offline |
+| `slow` | The `journey` catalog without its failures: no 503, 500 or 404 answers, every image served. Every response arrives after 4 s. |
+| `offline` | Every request fails as offline, images included |
 
-In every scenario, image requests get a generated image, except for products the script marks as image-less, which get a 404.
+In `journey`, `large` and `slow`, image requests get a generated image. In `journey`, products whose id is divisible by 10 get a 404 instead. Scenarios ignore `sortBy` and `order`, so sorting is checked against the live API.
 
 ## 7. States and edge cases
 
@@ -169,7 +169,7 @@ In every scenario, image requests get a generated image, except for products the
   - search: "No products match “<query>”" with "Clear search";
   - category: "No products in <Category>";
   - otherwise: "No products yet".
-- [ ] **AC-009** Given a catalog of 1,200 products (`large` scenario), when the merchant scrolls from top to bottom, then every row appears in order. Rows are created lazily. Image requests are made only for rows that come on screen, and a row that leaves the screen cancels its pending image request. Manual check, Release build: no visible hitch while scrolling.
+- [ ] **AC-009** Given a catalog of 1,200 products (`large` scenario), when the merchant scrolls from top to bottom, then every row appears in order. Rows are created lazily. Image requests are made only for rows that come on screen, and a row that leaves the screen cancels its pending image request. Manual check by the operator: an optimized Debug build (`SWIFT_OPTIMIZATION_LEVEL=-O`) launched with `-scenario large` scrolls with no visible hitch, and memory stays flat. Scenarios don't exist in Release.
 - [ ] **AC-010** The stock badge shows the API's `availabilityStatus` label and the count ("Low Stock · 3"):
   - "In Stock" green;
   - "Low Stock" orange;
