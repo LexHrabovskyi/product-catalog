@@ -1,32 +1,17 @@
-//
-//  Product_catalogApp.swift
-//  Product catalog
-//
-//  Created by Lex Hrabovskyi on 2026-11-02.
-//
-
+import AppFeature
 import SwiftUI
-import SwiftData
 
 @main
 struct Product_catalogApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+    private static let store = AppFeature.makeStore()
 
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+    init() {
+        AppFeature.bootstrap(launchArguments: ProcessInfo.processInfo.arguments)
+    }
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            AppView(store: Self.store)
         }
-        .modelContainer(sharedModelContainer)
     }
 }
