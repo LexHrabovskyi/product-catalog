@@ -76,7 +76,7 @@ public struct PriceView: View {
 }
 
 extension FormatStyle where Self == Decimal.FormatStyle.Currency {
-    static var usd: Self { .currency(code: "USD") }
+    public static var usd: Self { .currency(code: "USD") }
 }
 
 #Preview {

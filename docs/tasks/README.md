@@ -6,10 +6,10 @@ How the work is cut, who runs it and where it stands. The session rules are in [
 |---|---|---|---|---|---|
 | [PC-01](PC-01-foundation.md) | Foundation: package, contracts, app shell | every module (skeleton and contract) | — | iPhone 17 Pro | done |
 | [PC-10](PC-10-images-scenarios.md) | Image loading and Debug scenarios | `SharedUI/RemoteImage*`, `Networking/Scripted*`, `AppFeature/LaunchScenario.swift` | PC-01 | iPhone 17 | done |
-| [PC-20](PC-20-product-list.md) | Product list | `ProductListFeature/` | PC-01 | iPhone Air | ready |
-| [PC-30](PC-30-product-detail.md) | Product detail and add to basket | `ProductDetailFeature/` | PC-01 | iPhone 17 Pro Max | ready |
-| [PC-40](PC-40-basket-tab.md) | Basket tab | `BasketFeature/` | PC-01 | iPhone 17e | ready |
-| [PC-50](PC-50-ui-journey.md) | UI journey | `Product catalogUITests/` | PC-10 to PC-40 | iPhone 17 Pro | ready |
+| [PC-20](PC-20-product-list.md) | Product list | `ProductListFeature/` | PC-01 | iPhone Air | done |
+| [PC-30](PC-30-product-detail.md) | Product detail and add to basket | `ProductDetailFeature/` | PC-01 | iPhone 17 Pro Max | review passed, rework of one finding |
+| [PC-40](PC-40-basket-tab.md) | Basket tab | `BasketFeature/` | PC-01 | iPhone 17e | done |
+| [PC-50](PC-50-ui-journey.md) | UI journey and integration review | `Product catalogUITests/` | PC-10 to PC-40 | iPhone 17 Pro | ready |
 
 Waves:
 1. PC-01.

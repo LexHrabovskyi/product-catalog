@@ -20,7 +20,7 @@ public struct StockBadge: View {
         }
         .font(.caption.weight(.semibold))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(status.label), \(stock) units")
+        .accessibilityLabel("\(status.label), \(stock) \(stock == 1 ? "unit" : "units")")
     }
 
     private var tint: Color {

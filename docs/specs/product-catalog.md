@@ -1,6 +1,6 @@
 # Technical Specification: Product catalog v1
 
-- Status: Confirmed by the operator, 2026-11-02. Clarified after PC-10's review: §6 scenario notes and AC-009's manual check (D22).
+- Status: Confirmed by the operator, 2026-11-02. Clarified after PC-10's review: §6 scenario notes and AC-009's manual check (D22). AC-029 added by the operator (D25).
 - Date: 2026-11-02
 - Decisions: [decisions.md](../decisions.md) D1–D10; [ADR-0001](../adr/0001-tca-modular-architecture.md), [ADR-0002](../adr/0002-concurrency-isolation.md), [ADR-0003](../adr/0003-networking-and-failure-policy.md), [ADR-0004](../adr/0004-shared-persisted-basket.md)
 
@@ -226,6 +226,10 @@ In `journey`, `large` and `slow`, image requests get a generated image. In `jour
   7. Open product C: it loads normally → add C.
   8. The basket badge shows 2. The Basket tab lists A and C at their minimum quantities with the expected total.
 - [ ] **AC-028** Release builds contain no scripted transport and no scenario handling. A Debug build launched without `-scenario` uses the live network and the real basket file.
+- [ ] **AC-029** UI journey, continued after AC-027's step 4. Same scenario, no network:
+  1. Choose the first category in the category menu: only that category's products are listed. Then choose "All categories" again.
+  2. Search "Product 11": after the debounce, exactly 11 products are listed (Product 11 and Product 110–119), and the category control shows "All categories" and is disabled.
+  3. Clear the search: browsing resumes with every product.
 
 ## 10. Architecture decisions
 

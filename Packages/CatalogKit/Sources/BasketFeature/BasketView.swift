@@ -5,8 +5,6 @@ import ProductsClient
 import SharedUI
 import SwiftUI
 
-private let usd = Decimal.FormatStyle.Currency(code: "USD")
-
 public struct BasketView: View {
     @Bindable var store: StoreOf<BasketFeature>
 
@@ -53,15 +51,15 @@ public struct BasketView: View {
             // Amounts in primary rather than the list's secondary gray, which is too faint for the totals.
             Section {
                 LabeledContent("Subtotal") {
-                    Text(store.basket.subtotal, format: usd).foregroundStyle(.primary)
+                    Text(store.basket.subtotal, format: .usd).foregroundStyle(.primary)
                 }
                 .accessibilityIdentifier("basket.subtotal")
                 LabeledContent("Savings") {
-                    Text(-store.basket.savings, format: usd).foregroundStyle(.primary)
+                    Text(-store.basket.savings, format: .usd).foregroundStyle(.primary)
                 }
                 .accessibilityIdentifier("basket.savings")
                 LabeledContent("Total") {
-                    Text(store.basket.total, format: usd).foregroundStyle(.primary)
+                    Text(store.basket.total, format: .usd).foregroundStyle(.primary)
                 }
                 .font(.headline)
                 .accessibilityIdentifier("basket.total")
@@ -94,8 +92,8 @@ private struct BasketLineRow: View {
         let layout = dynamicTypeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
             : AnyLayout(HStackLayout(alignment: .top, spacing: 12))
-        let unitPrice = line.unitPrice.formatted(usd)
-        let lineTotal = line.lineTotal.formatted(usd)
+        let unitPrice = line.unitPrice.formatted(.usd)
+        let lineTotal = line.lineTotal.formatted(.usd)
         return layout {
             RemoteImage(url: line.thumbnail)
                 .frame(width: 56, height: 56)
