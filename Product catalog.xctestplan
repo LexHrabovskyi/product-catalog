@@ -1,0 +1,32 @@
+{
+  "configurations" : [
+    {
+      "id" : "6F1C2B7A-3D4E-4F5A-8B9C-0D1E2F3A4B5C",
+      "name" : "Default",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:Packages\/CatalogKit",
+        "identifier" : "CatalogKitTests",
+        "name" : "CatalogKitTests"
+      }
+    },
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:Product catalog.xcodeproj",
+        "identifier" : "86B6D4983098910300B8623E",
+        "name" : "Product catalogUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

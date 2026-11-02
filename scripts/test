@@ -1,0 +1,38 @@
+#!/bin/bash
+# Runs tests on the simulator named in .build/simulator (iPhone 17 Pro when absent).
+#   scripts/test               every CatalogKit unit and feature test
+#   scripts/test Suite…        only the named Swift Testing suites, e.g. BasketTests
+#   scripts/test --ui          the app's UI tests
+# Prints failures and the verdict; the full log is .build/logs/test.log.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SIMULATOR="iPhone 17 Pro"
+[ -f "$ROOT/.build/simulator" ] && SIMULATOR="$(tr -d '\n' < "$ROOT/.build/simulator")"
+LOG="$ROOT/.build/logs/test.log"
+mkdir -p "$ROOT/.build/logs"
+
+ONLY=()
+if [ "${1:-}" = "--ui" ]; then
+  ONLY=("-only-testing:Product catalogUITests")
+elif [ $# -eq 0 ]; then
+  ONLY=("-only-testing:CatalogKitTests")
+else
+  for suite in "$@"; do ONLY+=("-only-testing:CatalogKitTests/$suite"); done
+fi
+
+echo "# $SIMULATOR: ${ONLY[*]}"
+STATUS=0
+xcodebuild test \
+  -project "$ROOT/Product catalog.xcodeproj" \
+  -scheme "Product catalog" \
+  -destination "platform=iOS Simulator,name=$SIMULATOR" \
+  -derivedDataPath "$ROOT/.build/DerivedData" \
+  -skipMacroValidation \
+  "${ONLY[@]}" > "$LOG" 2>&1 || STATUS=$?
+
+# Log lines echoed by the code under test carry "[pid:tid]" and can contain "error:"; they are not failures.
+grep -E "error:|✘|recorded an issue|Test run with|Executed [0-9]+ test|\*\* TEST" "$LOG" \
+  | grep -vE "/SourcePackages/checkouts/|\[[0-9]+:[0-9]+\] |◇" | tail -40 || true
+[ "$STATUS" -eq 0 ] || echo "# failed ($STATUS); full log: $LOG"
+exit "$STATUS"
