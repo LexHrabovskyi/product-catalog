@@ -43,12 +43,16 @@ public struct ProductDetailView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(.regularMaterial, in: Capsule())
-                .padding(.top, 8)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .background(.bar)
         case let .failed(error):
             InlineRetryNotice(title: "Couldn't update", error: error, identifier: "detail.updateNotice") {
                 store.send(.retryButtonTapped)
             }
             .padding([.horizontal, .top])
+            .padding(.bottom, 8)
+            .background(.bar)
         case .notRequested, .loading, .updated, .gone:
             EmptyView()
         }
