@@ -1,40 +1,71 @@
 import Basket
 import ComposableArchitecture
-import SwiftUI
+import Foundation
+import os
+
+private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ProductCatalog", category: "basket")
 
 @Reducer
 public struct BasketFeature {
     @ObservableState
     public struct State: Equatable {
         @Shared(.basket) public var basket
+        @Presents public var alert: AlertState<Action.Alert>?
 
         public init() {}
     }
 
-    public enum Action {}
+    public enum Action {
+        case alert(PresentationAction<Alert>)
+        case clearButtonTapped
+        case quantityChanged(id: BasketLine.ID, quantity: Int)
+        case removeButtonTapped(id: BasketLine.ID)
+
+        public enum Alert: Equatable {
+            case confirmClear
+        }
+    }
 
     public init() {}
 
     public var body: some ReducerOf<Self> {
-        EmptyReducer()
-    }
-}
+        Reduce { state, action in
+            switch action {
+            case .alert(.presented(.confirmClear)):
+                let lineCount = state.basket.lineCount
+                state.$basket.withLock { $0.removeAll() }
+                logger.info("Cleared the basket, lines removed: \(lineCount)")
+                return .none
 
-public struct BasketView: View {
-    let store: StoreOf<BasketFeature>
+            case .alert:
+                return .none
 
-    public init(store: StoreOf<BasketFeature>) {
-        self.store = store
-    }
+            case .clearButtonTapped:
+                let lineCount = state.basket.lineCount
+                state.alert = AlertState {
+                    TextState("Clear basket?")
+                } actions: {
+                    ButtonState(role: .destructive, action: .confirmClear) {
+                        TextState("Clear")
+                    }
+                    ButtonState(role: .cancel) {
+                        TextState("Cancel")
+                    }
+                } message: {
+                    lineCount == 1 ? TextState("Remove 1 product?") : TextState("Remove all \(lineCount) products?")
+                }
+                return .none
 
-    public var body: some View {
-        ContentUnavailableView("Basket", systemImage: "basket", description: Text("\(store.basket.lineCount) products"))
-            .navigationTitle("Basket")
-    }
-}
+            case let .quantityChanged(id, quantity):
+                state.$basket.withLock { $0.setQuantity(quantity, forProduct: id) }
+                return .none
 
-#Preview {
-    NavigationStack {
-        BasketView(store: Store(initialState: BasketFeature.State()) { BasketFeature() })
+            case let .removeButtonTapped(id):
+                state.$basket.withLock { $0.remove(productID: id) }
+                logger.info("Removed product \(id) from the basket")
+                return .none
+            }
+        }
+        .ifLet(\.$alert, action: \.alert)
     }
 }
