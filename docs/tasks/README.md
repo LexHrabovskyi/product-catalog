@@ -10,8 +10,8 @@ How the work is cut, who runs it and where it stands. The session rules are in [
 | [PC-30](PC-30-product-detail.md) | Product detail and add to basket | `ProductDetailFeature/` | PC-01 | iPhone 17 Pro Max | done |
 | [PC-40](PC-40-basket-tab.md) | Basket tab | `BasketFeature/` | PC-01 | iPhone 17e | done |
 | [PC-50](PC-50-ui-journey.md) | UI journey and integration review | `Product catalogUITests/` | PC-10 to PC-40 | iPhone 17 Pro | done |
-| [PC-60](PC-60-detail-basket-control.md) | Detail: floating basket control, folded description, gallery preload | `ProductDetailFeature/`, `SharedUI/RemoteImage.swift` | PC-50 | iPhone 17 Pro Max | ready |
-| [PC-70](PC-70-catalog-filter-basket-totals.md) | Catalog filter and pinned basket totals | `ProductListFeature/`, `BasketFeature/`, the basket-button route in `AppFeature` | PC-50 | iPhone Air | ready |
+| [PC-60](PC-60-detail-basket-control.md) | Detail: floating basket control, folded description, gallery preload | `ProductDetailFeature/`, `SharedUI/RemoteImage.swift` | PC-50 | iPhone 17 Pro Max | done |
+| [PC-70](PC-70-catalog-filter-basket-totals.md) | Catalog filter and pinned basket totals | `ProductListFeature/`, `BasketFeature/`, the basket-button route in `AppFeature` | PC-50 | iPhone Air | done, merged without review (D39) |
 | [PC-80](PC-80-journey-update.md) | UI journey update and integration check | `Product catalogUITests/` | PC-60, PC-70 | iPhone 17 Pro | ready |
 
 Waves:

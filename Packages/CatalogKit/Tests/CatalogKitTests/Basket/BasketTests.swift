@@ -1,6 +1,6 @@
 import Basket
+import Catalog
 import Foundation
-import Models
 import Testing
 
 struct BasketTests {

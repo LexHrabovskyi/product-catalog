@@ -13,7 +13,7 @@ Where things are defined. Read only what your card cites.
 - **Roles.** The agent that writes production code never writes, edits or deletes tests. The agent that writes tests never edits production code. One agent works on one card.
 - **Commits.** Implementers and reviewers never commit, push or merge. The coordinator commits a card as `PC-NN: <title>` on its branch once its review passes, then merges it into `main`. Nothing is pushed without the operator.
 - **Authority files.** These change only in coordinator or spec sessions: `docs/`, `CLAUDE.md`, `AGENTS.md`, `scripts/`, `Package.swift`, `Package.resolved`, `project.pbxproj`, the shared scheme and `Product catalog.xctestplan`. An implementer that disagrees with its card writes the disagreement in its `notes.md` and carries on with the card as written.
-- **Frozen interfaces.** A module's public interface, as the foundation shipped it, changes only through the coordinator. Record the need in `notes.md`. A component that only one feature uses lives in that feature, not in `SharedUI`.
+- **Frozen interfaces.** A module's public interface, as the foundation shipped it, changes only through the coordinator. Record the need in `notes.md`. A component that only one feature uses lives in that feature, not in `Presentation`.
 - **Dependencies.** The Composable Architecture and the Point-Free packages it brings are the only third-party code. Adding anything else needs an ADR first.
 - **No silent failure.** No `try?`, `try!`, force unwraps or empty `catch`. Handle an error where it can be handled and log it there with `os.Logger`, or rethrow it. `CancellationError` is an outcome, not a failure: don't show it and don't log it as an error.
 - **No ids in code.** Never cite AC, ADR or card ids in code or comments. Comments state behaviour, one or two lines. Task reasoning goes in the task's `notes.md`.
@@ -38,7 +38,7 @@ Swift 6 language mode everywhere.
 
 ## TCA conventions
 
-- One feature is one module: an `@Reducer` with `@ObservableState` state, and its view taking `StoreOf<Feature>` (`@Bindable` when it binds).
+- One feature is one folder in `AppFeature`: an `@Reducer` with `@ObservableState` state, and its view taking `StoreOf<Feature>` (`@Bindable` when it binds).
 - Scope with `store.scope(\.child, action: \.child)` and `Scope(\.child, action: \.child)`. The `state:` spellings are deprecated.
 - Side effects run in `.run` effects through `@Dependency` clients: `productsClient`, `dataTransfer` and `continuousClock`. Reducers never read `Date()` or sleep for real.
 - Debounce with `clock.sleep(for:)` inside an effect marked `.cancellable(id:cancelInFlight: true)`, never `Effect.debounce`. Give every cancellable effect its own `CancelID`.
@@ -51,30 +51,26 @@ Swift 6 language mode everywhere.
 ```text
 Product catalog/              app target: @main, the root store, the launch bootstrap; nothing else
 Packages/CatalogKit/Sources/
-  Models/                     Product, Review, ProductPage, ProductCategory, ProductQuery, SortOption,
-                              AvailabilityStatus, CatalogError, price math; pure values, no I/O
-  Basket/                     Basket and BasketLine rules and totals; the shared `.basket` key
   Networking/                 DataTransfer protocol, live URLSession transport, Debug scripted transport
-  ProductsClient/             DummyJSON endpoints, decoding, error mapping, request logs, preview fixtures
-  SharedUI/                   StockBadge, PriceView, ErrorStateView, InlineRetryNotice, SlowConnectionHint,
+  Catalog/                    Product, Review, ProductPage, ProductCategory, ProductQuery, SortOption,
+                              AvailabilityStatus, CatalogError, price math; the DummyJSON client:
+                              endpoints, decoding, error mapping, request logs, preview fixtures
+  Basket/                     Basket and BasketLine rules and totals; the shared `.basket` key
+  Presentation/               StockBadge, PriceView, ErrorStateView, InlineRetryNotice, SlowConnectionHint,
                               QuantityStepper, RemoteImage, CatalogError copy
-  ProductListFeature/         list: paging, search, category, sort, states, toolbar basket button
-  ProductDetailFeature/       detail: gallery, facts, reviews, refresh, add to basket
-  BasketFeature/              Basket tab: lines, quantities, totals, clear
-  AppFeature/                 TabView root, catalog navigation stack, launch scenarios
+  AppFeature/                 the screens: TabView root, catalog stack, launch scenarios, and one folder
+                              per feature: ProductList/, ProductDetail/, BasketTab/
 Packages/CatalogKit/Tests/CatalogKitTests/<Area>/   reviewer-owned; shared helpers only in Support/
 Product catalogUITests/       reviewer-owned UI journey
 ```
 
 | Module | Imports | Must not |
 |---|---|---|
-| `Models` | Foundation | anything else |
-| `Basket` | Models, Sharing | SwiftUI, network |
-| `Networking` | Dependencies | Models, SwiftUI |
-| `ProductsClient` | Models, Networking, Dependencies | SwiftUI, ComposableArchitecture |
-| `SharedUI` | Models, Networking, Dependencies, SwiftUI | ProductsClient, ComposableArchitecture |
-| features | Models, Basket, ProductsClient, SharedUI, ComposableArchitecture | each other |
-| `AppFeature` | the features, Networking, Basket, ComposableArchitecture | — |
+| `Networking` | Dependencies | Catalog, SwiftUI |
+| `Catalog` | Foundation, Networking, Dependencies | SwiftUI, ComposableArchitecture |
+| `Basket` | Catalog, Sharing | SwiftUI, network |
+| `Presentation` | Catalog, Networking, Dependencies, SwiftUI | ComposableArchitecture |
+| `AppFeature` | Catalog, Basket, Networking, Presentation, ComposableArchitecture | — |
 | app target | AppFeature | anything else |
 
 ## Commands

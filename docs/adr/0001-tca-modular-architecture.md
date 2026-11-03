@@ -69,3 +69,7 @@ Option 1.
 
 - Revisit when TCA 2.0 is public.
 - Revisit isolation together with [ADR-0002](0002-concurrency-isolation.md).
+
+## Amendments
+
+- 2026-11-03 (D38): nine modules became five. `Models` and `ProductsClient` merged into `Catalog`, `SharedUI` became `Presentation`, and the three feature modules moved into `AppFeature`, one folder each. The feature boundaries are now folders and delegate actions, not separate modules.

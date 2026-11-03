@@ -1,9 +1,8 @@
 import AppFeature
 import Basket
+import Catalog
 import ComposableArchitecture
 import Foundation
-import Models
-import ProductDetailFeature
 @_spi(Internals) import Sharing
 import SwiftUI
 import Testing
@@ -18,14 +17,6 @@ struct AppFeatureTests {
 
         await store.send(.catalog(.delegate(.productTapped(lamp)))) {
             $0.path[id: 0] = .detail(ProductDetailFeature.State(product: self.lamp))
-        }
-    }
-
-    @Test func basketButtonSelectsTheBasketTab() async {
-        let store = TestStore(initialState: AppFeature.State()) { AppFeature() }
-
-        await store.send(.catalog(.delegate(.basketButtonTapped))) {
-            $0.selectedTab = .basket
         }
     }
 

@@ -1,13 +1,10 @@
 import Basket
-import BasketFeature
 import ComposableArchitecture
 import Foundation
 import os
-import ProductDetailFeature
-import ProductListFeature
 import SwiftUI
 
-let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ProductCatalog", category: "basket")
+private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ProductCatalog", category: "basket")
 
 @Reducer
 public struct AppFeature {
