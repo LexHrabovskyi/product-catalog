@@ -17,14 +17,10 @@ let package = Package(
     platforms: [.iOS(.v26)],
     products: [
         .library(name: "AppFeature", targets: ["AppFeature"]),
-        .library(name: "ProductListFeature", targets: ["ProductListFeature"]),
-        .library(name: "ProductDetailFeature", targets: ["ProductDetailFeature"]),
-        .library(name: "BasketFeature", targets: ["BasketFeature"]),
-        .library(name: "SharedUI", targets: ["SharedUI"]),
-        .library(name: "ProductsClient", targets: ["ProductsClient"]),
-        .library(name: "Networking", targets: ["Networking"]),
+        .library(name: "Presentation", targets: ["Presentation"]),
         .library(name: "Basket", targets: ["Basket"]),
-        .library(name: "Models", targets: ["Models"]),
+        .library(name: "Catalog", targets: ["Catalog"]),
+        .library(name: "Networking", targets: ["Networking"]),
     ],
     dependencies: [
         .package(
@@ -36,40 +32,23 @@ let package = Package(
         .package(url: "https://github.com/pointfreeco/swift-sharing", from: "2.8.1"),
     ],
     targets: [
-        .target(name: "Models", swiftSettings: concurrency),
-        .target(name: "Basket", dependencies: ["Models", sharing], swiftSettings: concurrency),
         .target(name: "Networking", dependencies: [dependencies], swiftSettings: concurrency),
         .target(
-            name: "ProductsClient",
-            dependencies: ["Models", "Networking", dependencies, dependenciesMacros],
+            name: "Catalog",
+            dependencies: ["Networking", dependencies, dependenciesMacros],
             swiftSettings: concurrency
         ),
-        .target(name: "SharedUI", dependencies: ["Models", "Networking", dependencies], swiftSettings: concurrency),
-        .target(
-            name: "ProductListFeature",
-            dependencies: ["Models", "Basket", "ProductsClient", "SharedUI", tca],
-            swiftSettings: concurrency
-        ),
-        .target(
-            name: "ProductDetailFeature",
-            dependencies: ["Models", "Basket", "ProductsClient", "SharedUI", tca],
-            swiftSettings: concurrency
-        ),
-        .target(
-            name: "BasketFeature",
-            dependencies: ["Models", "Basket", "ProductsClient", "SharedUI", tca],
-            swiftSettings: concurrency
-        ),
+        .target(name: "Basket", dependencies: ["Catalog", sharing], swiftSettings: concurrency),
+        .target(name: "Presentation", dependencies: ["Catalog", "Networking", dependencies], swiftSettings: concurrency),
         .target(
             name: "AppFeature",
-            dependencies: ["ProductListFeature", "ProductDetailFeature", "BasketFeature", "Networking", "Basket", tca],
+            dependencies: ["Basket", "Catalog", "Networking", "Presentation", tca],
             swiftSettings: concurrency
         ),
         .testTarget(
             name: "CatalogKitTests",
             dependencies: [
-                "Models", "Basket", "Networking", "ProductsClient", "SharedUI",
-                "ProductListFeature", "ProductDetailFeature", "BasketFeature", "AppFeature",
+                "AppFeature", "Basket", "Catalog", "Networking", "Presentation",
                 tca,
                 .product(name: "DependenciesTestSupport", package: "swift-dependencies"),
             ],

@@ -1,10 +1,9 @@
 import Basket
+import Catalog
 import ComposableArchitecture
 import Dependencies
 import Foundation
-import Models
 import Networking
-import ProductsClient
 import Testing
 import UIKit
 

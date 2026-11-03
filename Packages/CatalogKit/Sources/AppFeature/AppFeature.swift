@@ -1,13 +1,10 @@
 import Basket
-import BasketFeature
 import ComposableArchitecture
 import Foundation
 import os
-import ProductDetailFeature
-import ProductListFeature
 import SwiftUI
 
-let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ProductCatalog", category: "basket")
+private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ProductCatalog", category: "basket")
 
 @Reducer
 public struct AppFeature {
@@ -55,10 +52,6 @@ public struct AppFeature {
             switch action {
             case let .catalog(.delegate(.productTapped(product))):
                 state.path.append(.detail(ProductDetailFeature.State(product: product)))
-                return .none
-
-            case .catalog(.delegate(.basketButtonTapped)):
-                state.selectedTab = .basket
                 return .none
 
             case .launched:

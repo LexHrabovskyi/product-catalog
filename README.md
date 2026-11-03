@@ -16,7 +16,7 @@ Tests run with ⌘U. Debug builds also accept a `-scenario` launch argument (*Ed
 
 | Decision | Instead of | Why |
 |---|---|---|
-| **TCA 1.26, one module per feature** in a local Swift package, with swift-dependencies for DI. [ADR-0001](docs/adr/0001-tca-modular-architecture.md) | MVVM with `@Observable`; Factory | One state model with exhaustive `TestStore` tests. TCA already ships a DI container. |
+| **TCA 1.26 in a local Swift package of five modules:** Networking, Catalog, Basket, Presentation, and AppFeature for the screens. swift-dependencies for DI. [ADR-0001](docs/adr/0001-tca-modular-architecture.md) | MVVM with `@Observable`; a module per screen; Factory | One state model with exhaustive `TestStore` tests. Each module boundary has one reason. TCA already ships a DI container. |
 | **Swift 6 with approachable concurrency.** The package is nonisolated; only the app target defaults to the main actor. [ADR-0002](docs/adr/0002-concurrency-isolation.md) | MainActor by default everywhere | TCA 1.x breaks under default MainActor isolation. |
 | **One `DataTransfer` protocol onto the network.** A 15 s limit, explicit Retry, and "Slow connection…" after 3 s. [ADR-0003](docs/adr/0003-networking-and-failure-policy.md) | `URLProtocol` stubs; automatic retry | Every failure can be replayed, in tests and demos, through the real decoding and error mapping. |
 | **Images through the same seam,** into a bounded memory cache. | `AsyncImage`; Nuke | The CDN sends `Cache-Control: no-store`, so nothing else would cache them. |
@@ -58,5 +58,6 @@ The app already logs each request's outcome and duration with `os.Logger`. Searc
   - I reverted MainActor-by-default in the package once research showed TCA 1.x breaks under it.
   - I overruled its product suggestions (derived stock levels, sort by stock, an inventory-first detail screen) and added the persisted basket.
   - I stopped a reviewer that was running inside the coordinator's session, and restarted it clean.
+  - After using the app on my iPhone, I redesigned the detail screen's basket control (it ignored what was already in the basket), the category filter and the basket totals. I also cut the modules from nine to five.
 
 The agents' rules are in [CLAUDE.md](CLAUDE.md), and the task cards are in [docs/tasks](docs/tasks/README.md).

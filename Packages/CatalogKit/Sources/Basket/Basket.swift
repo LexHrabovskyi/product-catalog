@@ -1,5 +1,5 @@
+import Catalog
 import Foundation
-import Models
 
 /// A product in the basket, with the product data as it was when it was added.
 public struct BasketLine: Codable, Hashable, Identifiable, Sendable {
