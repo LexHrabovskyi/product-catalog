@@ -207,6 +207,7 @@ In `journey`, `large` and `slow`, image requests get a generated image. In `jour
 - [ ] **AC-022** The Basket tab's badge shows the number of lines (A1). The catalog's toolbar has no basket button. Every screen reads one shared basket, so a change anywhere shows everywhere at once.
 - [ ] **AC-023** The Basket tab:
   - lists each line with thumbnail, title, discounted unit price, a stepper bounded by minimum…stock, and the line total;
+  - opens a line's product in the Catalog tab when the line is tapped, as the only screen on the catalog stack;
   - supports swipe to remove;
   - offers "Clear basket", which confirms first;
   - shows "Subtotal", "Savings" and "Total" in a panel pinned to the bottom, above the tab bar, in the same floating style as the detail screen's basket control; the lines scroll under it;

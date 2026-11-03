@@ -12,6 +12,30 @@ struct AppFeatureTests {
     private let lamp = Product(id: 7, title: "Lamp", category: "furniture", price: 20, stock: 7, minimumOrderQuantity: 2)
     private let mug = Product(id: 8, title: "Mug", category: "kitchen-accessories", price: 5, stock: 9)
 
+    @Test func tappingABasketLineOpensItsProductAloneInTheCatalog() async {
+        var state = AppFeature.State()
+        state.selectedTab = .basket
+        let store = TestStore(initialState: state) { AppFeature() }
+        store.exhaustivity = .off
+        let product = Product(
+            id: 4, title: "Product 4", category: "beauty", price: 20, discountPercentage: 5,
+            stock: 10, minimumOrderQuantity: 2
+        )
+
+        await store.send(.basketTab(.delegate(.productTapped(BasketLine(product: product, quantity: 2)))))
+
+        #expect(store.state.selectedTab == .catalog)
+        #expect(store.state.path.count == 1)
+        guard case let .detail(detail)? = store.state.path.first else {
+            Issue.record("the catalog doesn't show the product's detail")
+            return
+        }
+        #expect(detail.product.id == 4)
+        #expect(detail.product.title == "Product 4")
+        #expect(detail.product.price == 20)
+        #expect(detail.product.minimumOrderQuantity == 2)
+    }
+
     @Test func tappingAProductPushesItsDetail() async {
         let store = TestStore(initialState: AppFeature.State()) { AppFeature() }
 

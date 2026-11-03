@@ -18,6 +18,16 @@ struct BasketFeatureTests {
         stock: 7, minimumOrderQuantity: 2, quantity: 2
     )
 
+    @Test func tappingALineAsksTheAppToOpenItsProduct() async {
+        @Shared(.basket) var basket
+        $basket.withLock { $0 = Basket(lines: [mascara, lemon]) }
+        let store = TestStore(initialState: BasketFeature.State()) { BasketFeature() }
+
+        await store.send(.lineTapped(id: mascara.id))
+        await store.receive(\.delegate.productTapped, mascara)
+        await store.send(.lineTapped(id: 999))
+    }
+
     @Test func quantityChangesReachTheSharedLineWithinMinimumThroughStock() async {
         @Shared(.basket) var basket
         $basket.withLock { $0 = Basket(lines: [mascara, lemon]) }

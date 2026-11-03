@@ -1,4 +1,5 @@
 import Basket
+import Catalog
 import ComposableArchitecture
 import Foundation
 import os
@@ -52,6 +53,12 @@ public struct AppFeature {
             switch action {
             case let .catalog(.delegate(.productTapped(product))):
                 state.path.append(.detail(ProductDetailFeature.State(product: product)))
+                return .none
+
+            case let .basketTab(.delegate(.productTapped(line))):
+                // The catalog shows just this product, so Back returns to the list.
+                state.selectedTab = .catalog
+                state.path = StackState([.detail(ProductDetailFeature.State(product: Product(line)))])
                 return .none
 
             case .launched:
@@ -131,5 +138,21 @@ public struct AppView: View {
         case 1: "1 product"
         case let count: "\(count) products"
         }
+    }
+}
+
+private extension Product {
+    /// The basket's copy of a product: enough for the detail screen until its refresh arrives.
+    init(_ line: BasketLine) {
+        self.init(
+            id: line.productID,
+            title: line.title,
+            category: "",
+            price: line.price,
+            discountPercentage: line.discountPercentage,
+            stock: line.stock,
+            minimumOrderQuantity: line.minimumOrderQuantity,
+            thumbnail: line.thumbnail
+        )
     }
 }

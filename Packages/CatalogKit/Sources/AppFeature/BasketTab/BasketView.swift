@@ -37,7 +37,8 @@ public struct BasketView: View {
                     quantity: Binding(
                         get: { line.quantity },
                         set: { store.send(.quantityChanged(id: line.id, quantity: $0)) }
-                    )
+                    ),
+                    open: { store.send(.lineTapped(id: line.id)) }
                 )
                 .swipeActions {
                     Button("Remove", systemImage: "trash", role: .destructive) {
@@ -98,16 +99,18 @@ private struct TotalRow: View {
 private struct BasketLineRow: View {
     let line: BasketLine
     @Binding var quantity: Int
+    let open: () -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            summary
+            Button(action: open) { summary }
+                .buttonStyle(.plain)
             QuantityStepper(quantity: $quantity, range: line.quantityRange)
         }
     }
 
-    /// One VoiceOver element; the stepper after it stays separately adjustable.
+    /// One VoiceOver button that opens the product; the stepper after it stays separately adjustable.
     private var summary: some View {
         let layout = dynamicTypeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
@@ -130,6 +133,7 @@ private struct BasketLineRow: View {
                 .font(.headline)
                 .layoutPriority(1)
         }
+        .contentShape(.rect)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(line.title), \(line.quantity) × \(unitPrice), \(lineTotal)")
         .accessibilityIdentifier("basket.line.\(line.id)")

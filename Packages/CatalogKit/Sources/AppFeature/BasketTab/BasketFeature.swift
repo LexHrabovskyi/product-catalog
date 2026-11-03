@@ -20,9 +20,16 @@ public struct BasketFeature {
         case clearButtonTapped
         case quantityChanged(id: BasketLine.ID, quantity: Int)
         case removeButtonTapped(id: BasketLine.ID)
+        case lineTapped(id: BasketLine.ID)
+        case delegate(Delegate)
 
         public enum Alert: Equatable {
             case confirmClear
+        }
+
+        @CasePathable
+        public enum Delegate: Equatable {
+            case productTapped(BasketLine)
         }
     }
 
@@ -63,6 +70,13 @@ public struct BasketFeature {
             case let .removeButtonTapped(id):
                 state.$basket.withLock { $0.remove(productID: id) }
                 logger.info("Removed product \(id) from the basket")
+                return .none
+
+            case let .lineTapped(id):
+                guard let line = state.basket.line(forProduct: id) else { return .none }
+                return .send(.delegate(.productTapped(line)))
+
+            case .delegate:
                 return .none
             }
         }

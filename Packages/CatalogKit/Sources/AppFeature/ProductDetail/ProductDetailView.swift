@@ -6,6 +6,7 @@ import SwiftUI
 
 public struct ProductDetailView: View {
     let store: StoreOf<ProductDetailFeature>
+    @ScaledMetric(relativeTo: .headline) private var controlHeight: CGFloat = 50
 
     public init(store: StoreOf<ProductDetailFeature>) {
         self.store = store
@@ -94,6 +95,8 @@ public struct ProductDetailView: View {
                 Text(control.title)
                     .font(.headline)
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
                     .frame(maxWidth: .infinity)
                     .accessibilityIdentifier("detail.quantity")
                 iconButton("Increase quantity", systemImage: "plus") {
@@ -102,7 +105,8 @@ public struct ProductDetailView: View {
                 .disabled(line.quantity >= line.quantityRange.upperBound)
                 .accessibilityIdentifier("detail.quantity.increment")
             }
-            .padding(4)
+            .padding(.horizontal, 3)
+            .frame(height: controlHeight)
             .glassEffect(.regular.interactive())
         } else {
             let isAddable = if case .notInBasket(.available) = control { true } else { false }
@@ -112,11 +116,19 @@ public struct ProductDetailView: View {
                     announce("Added, \(line.quantity) in basket")
                 }
             } label: {
+                // One line that shrinks to fit, in a control of a fixed height.
                 Text(control.title)
+                    .font(.headline)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .padding(.horizontal, 20)
                     .frame(maxWidth: .infinity)
+                    .frame(height: controlHeight)
+                    .contentShape(.capsule)
             }
-            .buttonStyle(.glassProminent)
-            .controlSize(.large)
+            .buttonStyle(.plain)
+            .foregroundStyle(isAddable ? Color.white : Color.secondary)
+            .glassEffect(isAddable ? .regular.tint(.accentColor).interactive() : .regular, in: .capsule)
             .disabled(!isAddable)
             .accessibilityIdentifier("detail.addToBasket")
         }
