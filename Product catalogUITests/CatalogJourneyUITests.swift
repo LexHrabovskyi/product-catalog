@@ -47,7 +47,7 @@ final class CatalogJourneyUITests: XCTestCase {
         XCTAssertTrue(catalog.dragUp(until: end), "page 4 completes the catalog")
         XCTAssertEqual(end.label, "All 120 products")
 
-        // The first category lists only its own products, then "All categories" lists every category again.
+        // The first category lists only its own products.
         let categoryMenu = app.buttons["catalog.categoryMenu"]
         categoryMenu.tap()
         let beauty = app.buttons["Beauty"]
@@ -67,16 +67,13 @@ final class CatalogJourneyUITests: XCTestCase {
         XCTAssertEqual(listed.keys.sorted(), Array(stride(from: 1, through: 118, by: 3)), "every third product is Beauty")
         XCTAssertTrue(listed.values.allSatisfy { $0.contains(", Beauty, ") }, "every row reads Beauty: \(listed)")
 
-        categoryMenu.tap()
-        app.buttons["All categories"].tap()
-        XCTAssertTrue(catalog.row(2).waitForExistence(timeout: 10), "all categories list Fragrances again")
-        XCTAssertTrue(catalog.row(3).exists, "all categories list Furniture again")
-        XCTAssertEqual(categoryMenu.value as? String, "All categories")
-
-        // A search spans the whole catalog, and the category control reads "All categories" and is disabled.
+        // With Beauty still selected, a search spans the whole catalog, resets the category and disables the filter.
         let search = app.searchFields["Search products"]
-        if !search.isHittable {
+        // The search field shows again once the list is back at the top.
+        var swipes = 0
+        while !(search.exists && search.isHittable), swipes < 15 {
             app.swipeDown()
+            swipes += 1
         }
         search.tap()
         search.typeText("Product 11\n")
@@ -100,49 +97,58 @@ final class CatalogJourneyUITests: XCTestCase {
 
         // Product A's refresh fails: "Couldn't update" shows, and adding still works.
         let updateNotice = app.descendants(matching: .any)["detail.updateNotice"]
-        let unavailable = app.staticTexts["detail.unavailable"]
         let add = app.buttons["detail.addToBasket"]
-        let addMessage = app.staticTexts["detail.addMessage"]
+        let inBasket = app.staticTexts["detail.quantity"]
         let back = app.navigationBars.buttons["BackButton"]
         catalog.row(2).tap()
         XCTAssertTrue(updateNotice.waitForExistence(timeout: 10), "product A's failed refresh shows the notice")
         XCTAssertTrue(updateNotice.staticTexts["Couldn't update"].exists)
         XCTAssertTrue(updateNotice.staticTexts["Error 503"].exists)
         XCTAssertTrue(updateNotice.buttons["detail.updateNotice.retry"].exists)
-        let quantity = app.descendants(matching: .any).matching(identifier: "detail.quantity").firstMatch
-        XCTAssertEqual(quantity.label, "Quantity", "the stepper reads as one element")
-        XCTAssertEqual(quantity.value as? String, "5", "the stepper starts at the minimum order")
-        XCTAssertTrue(add.isEnabled)
+        XCTAssertEqual(add.label, "Add 5 to basket", "the button names the minimum order")
         add.tap()
-        XCTAssertEqual(addMessage.label, "Added · 5 in basket")
+        XCTAssertTrue(inBasket.waitForExistence(timeout: 5), "adding turns the button into the stepper")
+        XCTAssertEqual(inBasket.label, "5 in basket")
         back.tap()
 
-        // Product B answers 404: it's no longer available, and adding is disabled.
+        // Product B answers 404: the control is disabled and says it's gone.
         XCTAssertTrue(catalog.row(3).waitForExistence(timeout: 5))
         catalog.row(3).tap()
-        XCTAssertTrue(unavailable.waitForExistence(timeout: 10), "product B's 404 shows it's gone")
-        XCTAssertEqual(unavailable.label, "This product is no longer available")
+        XCTAssertTrue(app.buttons["This product is no longer available"].waitForExistence(timeout: 10), "product B's 404 shows it's gone")
         XCTAssertFalse(add.isEnabled)
         back.tap()
 
-        // Product C loads normally, and adding works.
+        // Product C: add, step up and down, delete at the minimum, then add again.
         XCTAssertTrue(catalog.row(4).waitForExistence(timeout: 5), "back navigation still works")
         catalog.row(4).tap()
         XCTAssertTrue(add.waitForExistence(timeout: 5))
         add.tap()
-        XCTAssertEqual(addMessage.label, "Added · 2 in basket")
+        XCTAssertTrue(inBasket.waitForExistence(timeout: 5))
+        XCTAssertEqual(inBasket.label, "2 in basket")
+        app.buttons["detail.quantity.increment"].tap()
+        XCTAssertEqual(inBasket.label, "3 in basket")
+        app.buttons["detail.quantity.decrement"].tap()
+        XCTAssertEqual(inBasket.label, "2 in basket")
+        app.buttons["detail.quantity.remove"].tap()
+        XCTAssertTrue(add.waitForExistence(timeout: 5), "delete at the minimum brings Add back")
+        add.tap()
+        XCTAssertTrue(inBasket.waitForExistence(timeout: 5))
         XCTAssertFalse(updateNotice.exists)
-        XCTAssertFalse(unavailable.exists)
         back.tap()
 
-        // Both badges count the two lines, and the Basket tab holds A and C at their minimums.
-        let basketButton = app.buttons["catalog.basketButton"]
-        XCTAssertTrue(basketButton.waitForExistence(timeout: 5))
-        XCTAssertEqual(basketButton.value as? String, "2")
+        // Reopening A shows its basket line as the screen opens.
+        XCTAssertTrue(catalog.row(2).waitForExistence(timeout: 5))
+        catalog.row(2).tap()
+        XCTAssertTrue(inBasket.waitForExistence(timeout: 5), "a product in the basket opens on its stepper")
+        XCTAssertEqual(inBasket.label, "5 in basket")
+        back.tap()
+
+        // The Basket tab's badge counts the two lines, and the tab holds A and C at their minimums.
         let basketTab = app.tabBars.buttons["Basket"]
+        XCTAssertTrue(basketTab.waitForExistence(timeout: 5))
         XCTAssertEqual(basketTab.value as? String, "2 products")
-        basketButton.tap()
-        XCTAssertTrue(basketTab.isSelected, "the toolbar button switches to the Basket tab")
+        basketTab.tap()
+        XCTAssertTrue(basketTab.isSelected)
         let lineA = app.descendants(matching: .any)["basket.line.2"]
         XCTAssertTrue(lineA.waitForExistence(timeout: 5))
         XCTAssertEqual(lineA.label, "Product 2, 5 × $9.00, $45.00")

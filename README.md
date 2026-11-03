@@ -6,7 +6,7 @@ An iOS app for merchants who run their business from their phone. It checks pric
 
 Open `Product catalog.xcodeproj` in **Xcode 26.6 or later**, pick an iPhone simulator (iOS 26 or later) and press Run. On first open, Xcode fetches the packages and asks once to trust the Composable Architecture's macros (**Trust & Enable**). There are no keys and no other setup.
 
-Tests run with ⌘U. Debug builds also accept a `-scenario` launch argument (*Edit Scheme → Run → Arguments*), which replays network conditions without touching the API:
+Tests run with ⌘U; the UI journey alone takes about 3 minutes. Debug builds also accept a `-scenario` launch argument (*Edit Scheme → Run → Arguments*), which replays network conditions without touching the API:
 - `journey`: scripted failures;
 - `large`: 1,200 products;
 - `slow`: 4 s responses;
@@ -47,8 +47,8 @@ The app already logs each request's outcome and duration with `os.Logger`. Searc
 - **Tools.**
   - Claude Code coordinated the work. A spec interview produced the acceptance criteria, then the ADRs and task cards.
   - Separate sessions built the features in parallel, each in its own git worktree.
-  - Every card was checked by an independent reviewer session, which wrote its tests before reading the code.
-  - XcodeBuildMCP built and ran the app and took screenshots.
+  - Each feature card was checked by an independent reviewer session, which wrote its tests before reading the code. To save time, the last round (the catalog filter, the module restructure and the journey update) went in on the full test suite and a run on my iPhone instead.
+  - XcodeBuildMCP built and ran the app and took screenshots. Codex CLI drew the app icon in FYUL's colours.
 - **Where it helped.** It turned the brief into testable acceptance criteria. The reviews caught real defects:
   - a `+` in a search reached the API as a space;
   - a status notice scrolled away during a slow refresh;
