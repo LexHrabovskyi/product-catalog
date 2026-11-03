@@ -14,13 +14,13 @@ public struct ProductListView: View {
         // Search and toolbar sit outside the phase switch, so the search field survives content changes.
         content
             .navigationTitle("Catalog")
+            .navigationSubtitle(store.category?.name ?? "")
             .searchable(text: $store.searchText.sending(\.searchTextChanged), prompt: "Search products")
             // Sort stays reachable during a search; the bar would otherwise hide it.
             .searchPresentationToolbarBehavior(.avoidHidingContent)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { categoryMenu }
                 ToolbarItem(placement: .topBarTrailing) { sortMenu }
-                ToolbarItem(placement: .topBarTrailing) { basketButton }
+                ToolbarItem(placement: .topBarTrailing) { categoryMenu }
             }
             .onAppear { store.send(.onAppear) }
     }
@@ -138,7 +138,8 @@ public struct ProductListView: View {
     }
 
     private var categoryMenu: some View {
-        Menu(categoryTitle) {
+        let symbol = store.category == nil ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill"
+        return Menu("Category", systemImage: symbol) {
             Picker("Category", selection: $store.category.sending(\.categorySelected)) {
                 Text("All categories").tag(ProductCategory?.none)
                 if case let .loaded(categories) = store.categories {
@@ -159,15 +160,8 @@ public struct ProductListView: View {
             }
         }
         .disabled(store.searchQuery != nil)
-        .accessibilityLabel("Category")
-        .accessibilityValue(categoryTitle)
+        .accessibilityValue(store.category?.name ?? "All categories")
         .accessibilityIdentifier("catalog.categoryMenu")
-    }
-
-    /// A search spans every category, so the control reads "All categories" while one runs.
-    private var categoryTitle: String {
-        guard store.searchQuery == nil, let category = store.category else { return "All categories" }
-        return category.name
     }
 
     private var sortMenu: some View {
@@ -180,12 +174,6 @@ public struct ProductListView: View {
         }
         .accessibilityValue(store.sort.title)
         .accessibilityIdentifier("catalog.sortMenu")
-    }
-
-    private var basketButton: some View {
-        Button("Basket", systemImage: "basket") { store.send(.basketButtonTapped) }
-            .badge(store.basket.lineCount)
-            .accessibilityIdentifier("catalog.basketButton")
     }
 }
 

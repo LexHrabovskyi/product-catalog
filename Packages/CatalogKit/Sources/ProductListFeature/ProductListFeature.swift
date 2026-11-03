@@ -1,4 +1,3 @@
-import Basket
 import ComposableArchitecture
 import Foundation
 import Models
@@ -25,11 +24,10 @@ public struct ProductListFeature {
         public var searchText = ""
         /// The trimmed query the list shows; `nil` while browsing.
         public var searchQuery: String?
-        /// Kept while a search runs, so clearing the search returns to it.
+        /// `nil` shows every category. A search spans every category, so running one resets it.
         public var category: ProductCategory?
         public var sort: SortOption = .default
         public var categories: Categories = .loading
-        @Shared(.basket) public var basket
 
         public init() {}
 
@@ -68,7 +66,6 @@ public struct ProductListFeature {
         case onAppear
         case rowAppeared(Product.ID)
         case rowTapped(Product)
-        case basketButtonTapped
         case retryTapped
         case loadMoreRetryTapped
         case refreshPulled
@@ -86,7 +83,6 @@ public struct ProductListFeature {
         @CasePathable
         public enum Delegate {
             case productTapped(Product)
-            case basketButtonTapped
         }
     }
 
@@ -119,9 +115,6 @@ public struct ProductListFeature {
             case let .rowTapped(product):
                 return .send(.delegate(.productTapped(product)))
 
-            case .basketButtonTapped:
-                return .send(.delegate(.basketButtonTapped))
-
             case .retryTapped:
                 return loadFirstPage(&state)
 
@@ -153,12 +146,13 @@ public struct ProductListFeature {
 
             case let .searchDebounced(query):
                 state.searchQuery = query
+                state.category = nil
                 return loadFirstPage(&state)
 
             case let .categorySelected(category):
-                guard category != state.category else { return .none }
+                guard state.searchQuery == nil, category != state.category else { return .none }
                 state.category = category
-                return state.searchQuery == nil ? loadFirstPage(&state) : .none
+                return loadFirstPage(&state)
 
             case let .sortSelected(sort):
                 guard sort != state.sort else { return .none }
