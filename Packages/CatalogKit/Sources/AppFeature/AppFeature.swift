@@ -57,10 +57,6 @@ public struct AppFeature {
                 state.path.append(.detail(ProductDetailFeature.State(product: product)))
                 return .none
 
-            case .catalog(.delegate(.basketButtonTapped)):
-                state.selectedTab = .basket
-                return .none
-
             case .launched:
                 if let error = state.$basket.loadError {
                     logger.warning("Stored basket unreadable, starting empty: \(String(describing: error), privacy: .public)")

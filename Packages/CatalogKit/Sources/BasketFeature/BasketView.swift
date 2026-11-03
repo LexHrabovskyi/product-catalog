@@ -32,46 +32,67 @@ public struct BasketView: View {
 
     private var lines: some View {
         List {
-            Section {
-                ForEach(store.basket.lines) { line in
-                    BasketLineRow(
-                        line: line,
-                        quantity: Binding(
-                            get: { line.quantity },
-                            set: { store.send(.quantityChanged(id: line.id, quantity: $0)) }
-                        )
+            ForEach(store.basket.lines) { line in
+                BasketLineRow(
+                    line: line,
+                    quantity: Binding(
+                        get: { line.quantity },
+                        set: { store.send(.quantityChanged(id: line.id, quantity: $0)) }
                     )
-                    .swipeActions {
-                        Button("Remove", systemImage: "trash", role: .destructive) {
-                            store.send(.removeButtonTapped(id: line.id))
-                        }
+                )
+                .swipeActions {
+                    Button("Remove", systemImage: "trash", role: .destructive) {
+                        store.send(.removeButtonTapped(id: line.id))
                     }
                 }
             }
-            // Amounts in primary rather than the list's secondary gray, which is too faint for the totals.
-            Section {
-                LabeledContent("Subtotal") {
-                    Text(store.basket.subtotal, format: .usd).foregroundStyle(.primary)
-                }
-                .accessibilityIdentifier("basket.subtotal")
-                LabeledContent("Savings") {
-                    Text(-store.basket.savings, format: .usd).foregroundStyle(.primary)
-                }
-                .accessibilityIdentifier("basket.savings")
-                LabeledContent("Total") {
-                    Text(store.basket.total, format: .usd).foregroundStyle(.primary)
-                }
-                .font(.headline)
-                .accessibilityIdentifier("basket.total")
-            }
         }
         .accessibilityIdentifier("basket.list")
+        .safeAreaBar(edge: .bottom) { totals }
         .toolbar {
             Button("Clear basket", systemImage: "trash", role: .destructive) {
                 store.send(.clearButtonTapped)
             }
             .accessibilityIdentifier("basket.clear")
         }
+    }
+
+    private var totals: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TotalRow(title: "Subtotal", amount: store.basket.subtotal)
+                .accessibilityIdentifier("basket.subtotal")
+            TotalRow(title: "Savings", amount: -store.basket.savings)
+                .accessibilityIdentifier("basket.savings")
+            TotalRow(title: "Total", amount: store.basket.total)
+                .font(.headline)
+                .accessibilityIdentifier("basket.total")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .glassEffect(.regular, in: .rect(cornerRadius: 24))
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
+    }
+}
+
+/// One VoiceOver element. The amount sits beside its title while both fit, and otherwise wraps under it.
+private struct TotalRow: View {
+    let title: LocalizedStringKey
+    let amount: Decimal
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(title)
+                Spacer()
+                Text(amount, format: .usd)
+            }
+            VStack(alignment: .leading) {
+                Text(title)
+                Text(amount, format: .usd)
+            }
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 
