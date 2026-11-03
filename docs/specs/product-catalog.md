@@ -169,7 +169,7 @@ In `journey`, `large` and `slow`, image requests get a generated image. In `jour
   - search: "No products match “<query>”" with "Clear search";
   - category: "No products in <Category>";
   - otherwise: "No products yet".
-- [ ] **AC-009** Given a catalog of 1,200 products (`large` scenario), when the merchant scrolls from top to bottom, then every row appears in order. Rows are created lazily. Image requests are made only for rows that come on screen, and a row that leaves the screen cancels its pending image request. Manual check by the operator: an optimized Debug build (`SWIFT_OPTIMIZATION_LEVEL=-O`) launched with `-scenario large` scrolls with no visible hitch, and memory stays flat. Scenarios don't exist in Release.
+- [ ] **AC-009** Given a catalog of 1,200 products (`large` scenario), when the merchant scrolls from top to bottom, then every row appears in order. Rows are created lazily. Image requests are made only for rows that come on screen, and a row that leaves the screen cancels its pending image request. Manual check by the operator: an optimized Debug build (`SWIFT_OPTIMIZATION_LEVEL=-Osize`, whole-module) launched with `-scenario large` scrolls with no visible hitch, and memory stays flat. Scenarios don't exist in Release.
 - [ ] **AC-010** The stock badge shows the API's `availabilityStatus` label and the count ("Low Stock · 3"):
   - "In Stock" green;
   - "Low Stock" orange;
