@@ -29,6 +29,7 @@ Rows lead with price, discount and stock, and show the API's stock label as-is, 
 - **iPad and iPhone Duo layouts.** These become due once uploads need the iOS 27 SDK (April 2027), because apps built with it resize on the Duo's inner display.
 - **An offline catalog and a disk image cache.** Only the basket persists. Without signal, the app shows a clear offline state and Retry.
 - **Basket freshness.** A line keeps the price and stock from when it was added. Next, re-sync it when its product is opened.
+- **Truly modular packages.** Today one local package, `CatalogKit`, holds five modules, and the three screens share `AppFeature`. With more time, I'd split it into separate Swift packages, one per layer and one per feature, so each builds, tests and evolves on its own.
 - **Automatic retry,** if production data shows transient failures.
 - **Out of scope for v1:** ordering, sign-in, localization and analytics.
 
