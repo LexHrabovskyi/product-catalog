@@ -1,4 +1,5 @@
 #if DEBUG
+import Dependencies
 import Foundation
 import os
 import Synchronization
@@ -35,7 +36,7 @@ public final class ScriptedDataTransfer: DataTransfer {
         case .offline:
             throw URLError(.notConnectedToInternet)
         case .slow:
-            try await Task.sleep(for: .seconds(4))
+            try await pause(for: .seconds(4))
         case .journey, .large:
             break
         }
@@ -102,7 +103,7 @@ public final class ScriptedDataTransfer: DataTransfer {
         case (60, 1):
             return Self.message(500, "Internal Server Error")
         case (30, _):
-            try await Task.sleep(for: .seconds(2))
+            try await pause(for: .seconds(2))
             return nil
         default:
             return nil
@@ -112,5 +113,11 @@ public final class ScriptedDataTransfer: DataTransfer {
     private static func message(_ status: Int, _ text: String) -> (status: Int, body: Data) {
         (status, Data(#"{"message":"\#(text)"}"#.utf8))
     }
+}
+
+/// Scripted delays sleep on the injected clock: real time in the app, controllable in tests.
+private func pause(for duration: Duration) async throws {
+    @Dependency(\.continuousClock) var clock
+    try await clock.sleep(for: duration)
 }
 #endif

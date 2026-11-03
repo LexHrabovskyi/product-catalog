@@ -125,6 +125,7 @@ public struct ProductListView: View {
                     Label("No products match “\(query)”", systemImage: "magnifyingglass")
                 } actions: {
                     Button("Clear search") { store.send(.searchTextChanged("")) }
+                        .buttonStyle(.bordered)
                 }
             } else if let category = store.category {
                 ContentUnavailableView("No products in \(category.name)", systemImage: "tray")

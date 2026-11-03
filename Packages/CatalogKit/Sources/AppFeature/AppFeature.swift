@@ -122,11 +122,21 @@ public struct AppView: View {
                 }
             }
             .badge(store.basket.lineCount)
+            .accessibilityValue(basketTabValue)
             .accessibilityIdentifier("tab.basket")
         }
         .task { store.send(.launched) }
         .onChange(of: scenePhase) { _, phase in
             store.send(.scenePhaseChanged(phase))
+        }
+    }
+
+    /// The tab bar's badge isn't read by VoiceOver, so the tab says the count itself.
+    private var basketTabValue: String {
+        switch store.basket.lineCount {
+        case 0: ""
+        case 1: "1 product"
+        case let count: "\(count) products"
         }
     }
 }
