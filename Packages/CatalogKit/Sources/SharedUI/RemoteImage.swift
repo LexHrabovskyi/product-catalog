@@ -48,13 +48,22 @@ public struct RemoteImage: View {
     }
 }
 
+/// One large product symbol, sized to the tile, for every product without a loaded image.
 struct ImagePlaceholder: View {
     var body: some View {
         Rectangle()
             .fill(.quaternary)
             .overlay {
-                Image(systemName: "photo")
-                    .foregroundStyle(.secondary)
+                GeometryReader { geometry in
+                    let side = min(geometry.size.width, geometry.size.height) * 0.6
+                    Image(systemName: "shippingbox")
+                        .resizable()
+                        .scaledToFit()
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.secondary)
+                        .frame(width: side, height: side)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
             .accessibilityHidden(true)
     }
@@ -62,4 +71,5 @@ struct ImagePlaceholder: View {
 
 #Preview {
     RemoteImage(url: nil).frame(width: 56, height: 56)
+    RemoteImage(url: nil, contentMode: .fit).frame(height: 320)
 }

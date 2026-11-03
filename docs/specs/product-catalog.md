@@ -140,7 +140,7 @@ In `journey`, `large` and `slow`, image requests get a generated image. In `jour
 | Maximum | 1,000+ rows render lazily, and image loads follow visible rows (AC-009). Quantity is capped at stock. Titles wrap to 2 lines in rows. |
 | Unknown availability label | Shown as-is in a neutral style (AC-010) |
 | Missing brand | The category is shown (AC-001) |
-| Missing or failed image | A neutral placeholder with a photo symbol, never a broken image (AC-001, AC-017) |
+| Missing or failed image | One large product symbol (`shippingbox`) on a neutral tile, the same for every product, never a broken image (AC-001, AC-017) |
 | Unreadable stored basket | Start empty, log a warning, don't crash (AC-024) |
 | Stock below minimum order | Adding is disabled with an explanation (AC-021) |
 
