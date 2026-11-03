@@ -14,8 +14,17 @@ public struct QuantityStepper: View {
         Stepper(value: $quantity, in: range) {
             Text("Qty \(quantity)").monospacedDigit()
         }
+        // One adjustable element: VoiceOver hears "Quantity, 5" and can't step past either bound.
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel("Quantity")
         .accessibilityValue("\(quantity)")
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: quantity = min(quantity + 1, range.upperBound)
+            case .decrement: quantity = max(quantity - 1, range.lowerBound)
+            @unknown default: break
+            }
+        }
     }
 }
 

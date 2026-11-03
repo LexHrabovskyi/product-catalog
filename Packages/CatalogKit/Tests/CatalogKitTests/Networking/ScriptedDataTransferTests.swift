@@ -1,4 +1,5 @@
 import Basket
+import ComposableArchitecture
 import Dependencies
 import Foundation
 import Models
@@ -18,25 +19,32 @@ struct ScriptedDataTransferTests {
 
     @Test func journeyPagesFollowTheScript() async throws {
         let journey = ScriptedDataTransfer(scenario: .journey)
+        let clock = ImmediateClock()
+        let start = clock.now
 
-        await #expect(throws: CatalogError.server(status: 503)) { try await page(skip: 0, from: journey) }
-        let first = try await page(skip: 0, from: journey)
-        #expect(first.products.map(\.id) == Array(1...30))
-        #expect(first.products.first?.title == "Product 1")
-        #expect(first.total == 120)
+        try await withDependencies {
+            $0.continuousClock = clock
+        } operation: {
+            await #expect(throws: CatalogError.server(status: 503)) { try await page(skip: 0, from: journey) }
+            let first = try await page(skip: 0, from: journey)
+            #expect(first.products.map(\.id) == Array(1...30))
+            #expect(first.products.first?.title == "Product 1")
+            #expect(first.total == 120)
 
-        let second = try await timed { try await page(skip: 30, from: journey) }
-        #expect(second.elapsed >= .seconds(2))
-        #expect(second.value.products.map(\.id) == Array(31...60))
+            let second = try await timed(on: clock) { try await page(skip: 30, from: journey) }
+            #expect(second.elapsed == .seconds(2))
+            #expect(second.value.products.map(\.id) == Array(31...60))
 
-        await #expect(throws: CatalogError.server(status: 500)) { try await page(skip: 60, from: journey) }
-        let third = try await page(skip: 60, from: journey)
-        #expect(third.products.map(\.id) == Array(61...90))
+            await #expect(throws: CatalogError.server(status: 500)) { try await page(skip: 60, from: journey) }
+            let third = try await page(skip: 60, from: journey)
+            #expect(third.products.map(\.id) == Array(61...90))
 
-        let fourth = try await page(skip: 90, from: journey)
-        #expect(fourth.products.map(\.id) == Array(91...120))
-        #expect(fourth.products.last?.title == "Product 120")
-        #expect(fourth.total == 120)
+            let fourth = try await page(skip: 90, from: journey)
+            #expect(fourth.products.map(\.id) == Array(91...120))
+            #expect(fourth.products.last?.title == "Product 120")
+            #expect(fourth.total == 120)
+        }
+        #expect(start.duration(to: clock.now) == .seconds(2), "only page 2 waits")
     }
 
     @Test func journeyProductsFollowTheScriptAndMakeTheExpectedBasket() async throws {
@@ -162,18 +170,22 @@ struct ScriptedDataTransferTests {
 
     @Test func slowCatalogAnswersWithoutTheJourneyFailuresAfterFourSecondsEach() async throws {
         let slow = ScriptedDataTransfer(scenario: .slow)
+        let clock = ImmediateClock()
 
-        async let firstPage = timed { try await page(skip: 0, from: slow) }
-        async let refreshOfA = timed { try await product(2, from: slow) }
-        async let refreshOfB = timed { try await product(3, from: slow) }
-        let (rows, productA, productB) = try await (firstPage, refreshOfA, refreshOfB)
+        try await withDependencies {
+            $0.continuousClock = clock
+        } operation: {
+            let rows = try await timed(on: clock) { try await page(skip: 0, from: slow) }
+            let productA = try await timed(on: clock) { try await product(2, from: slow) }
+            let productB = try await timed(on: clock) { try await product(3, from: slow) }
 
-        #expect(rows.value.products.map(\.id) == Array(1...30))
-        #expect(productA.value.id == 2)
-        #expect(productB.value.id == 3)
-        #expect(rows.elapsed >= .seconds(4))
-        #expect(productA.elapsed >= .seconds(4))
-        #expect(productB.elapsed >= .seconds(4))
+            #expect(rows.value.products.map(\.id) == Array(1...30))
+            #expect(productA.value.id == 2)
+            #expect(productB.value.id == 3)
+            #expect(rows.elapsed == .seconds(4))
+            #expect(productA.elapsed == .seconds(4))
+            #expect(productB.elapsed == .seconds(4))
+        }
     }
 
     @Test func offlineFailsEveryRequestAsNotConnected() async throws {
@@ -187,20 +199,25 @@ struct ScriptedDataTransferTests {
         #expect(error?.code == .notConnectedToInternet)
     }
 
-    @Test(arguments: [
+    @Test(.timeLimit(.minutes(1)), arguments: [
         DelayedRequest(scenario: .journey, skip: 30),
         DelayedRequest(scenario: .slow, skip: 0),
     ])
     func cancellingADelayedRequestEndsItAtOnce(_ delayed: DelayedRequest) async throws {
         let transport = ScriptedDataTransfer(scenario: delayed.scenario)
+        let clock = TestClock()
 
-        let request = Task { try await page(skip: delayed.skip, from: transport) }
-        request.cancel()
-        let ending = await timed {
-            await #expect(throws: CancellationError.self) { try await request.value }
+        let request = Task {
+            try await withDependencies {
+                $0.continuousClock = clock
+            } operation: {
+                try await page(skip: delayed.skip, from: transport)
+            }
         }
+        request.cancel()
 
-        #expect(ending.elapsed < .seconds(1))
+        // The clock never advances, so a delay that ignored the cancellation would never end.
+        await #expect(throws: CancellationError.self) { try await request.value }
     }
 }
 
@@ -238,9 +255,11 @@ private func categories(from transport: some DataTransfer) async throws -> [Prod
     }
 }
 
-/// The operation's result and the wall-clock time it took.
-private func timed<Value>(_ operation: () async throws -> Value) async rethrows -> (value: Value, elapsed: Duration) {
-    let clock = ContinuousClock()
+/// The operation's result and how far its scripted delays moved `clock`.
+private func timed<Value>(
+    on clock: ImmediateClock<Duration>,
+    _ operation: () async throws -> Value
+) async rethrows -> (value: Value, elapsed: Duration) {
     let start = clock.now
     let value = try await operation()
     return (value, start.duration(to: clock.now))

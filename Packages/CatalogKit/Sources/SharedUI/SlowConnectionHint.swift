@@ -8,6 +8,8 @@ public struct SlowConnectionHint: View {
         Label("Slow connection…", systemImage: "tortoise")
             .font(.footnote)
             .foregroundStyle(.secondary)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Slow connection…")
             .accessibilityIdentifier("slowConnectionHint")
     }
 }

@@ -9,7 +9,7 @@ How the work is cut, who runs it and where it stands. The session rules are in [
 | [PC-20](PC-20-product-list.md) | Product list | `ProductListFeature/` | PC-01 | iPhone Air | done |
 | [PC-30](PC-30-product-detail.md) | Product detail and add to basket | `ProductDetailFeature/` | PC-01 | iPhone 17 Pro Max | done |
 | [PC-40](PC-40-basket-tab.md) | Basket tab | `BasketFeature/` | PC-01 | iPhone 17e | done |
-| [PC-50](PC-50-ui-journey.md) | UI journey and integration review | `Product catalogUITests/` | PC-10 to PC-40 | iPhone 17 Pro | in review |
+| [PC-50](PC-50-ui-journey.md) | UI journey and integration review | `Product catalogUITests/` | PC-10 to PC-40 | iPhone 17 Pro | done |
 
 Waves:
 1. PC-01.
