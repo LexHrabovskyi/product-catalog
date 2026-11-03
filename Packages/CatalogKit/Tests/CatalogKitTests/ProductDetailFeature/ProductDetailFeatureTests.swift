@@ -15,7 +15,7 @@ struct ProductDetailFeatureTests {
         id: 152, title: "Tennis Racket", category: "sports-accessories", price: 50, stock: 20, minimumOrderQuantity: 5
     )
 
-    @Test func opensWithTheTappedProductThenUpdatesItInPlaceKeepingTheChosenQuantity() async {
+    @Test func opensWithTheTappedProductUpdatesItInPlaceAndAddsTheMinimumOnce() async {
         let current = Product(
             id: 152, title: "Tennis Racket Pro", category: "sports-accessories", price: 55, stock: 30,
             minimumOrderQuantity: 5
@@ -36,28 +36,139 @@ struct ProductDetailFeatureTests {
         await store.send(.onAppear) {
             $0.refresh = .loading(isSlow: false)
         }
-        await store.send(.binding(.set(\.quantity, 9))) {
-            $0.quantity = 9
-        }
         await clock.advance(by: .seconds(1))
         await store.receive(\.refreshResponse) {
             $0.product = current
             $0.refresh = .updated
         }
         #expect(requested.value == [152])
+        #expect(store.state.basketControl.title == "Add 5 to basket", "The label names the minimum a tap adds")
 
+        // The line snapshots the refreshed product, not the row it was opened from.
+        let line = BasketLine(product: current, quantity: 5)
         await store.send(.addToBasketButtonTapped) {
-            $0.$basket.withLock {
-                $0 = Basket(lines: [
-                    BasketLine(
-                        productID: 152, title: "Tennis Racket Pro", thumbnail: nil, price: 55, discountPercentage: 0,
-                        stock: 30, minimumOrderQuantity: 5, quantity: 9
-                    ),
-                ])
-            }
-            $0.addOutcome = .added(quantity: 9)
+            $0.$basket.withLock { $0 = Basket(lines: [line]) }
         }
-        #expect(store.state.addMessage == "Added · 9 in basket")
+        #expect(store.state.basketControl == .inBasket(line))
+        #expect(store.state.basketControl.title == "5 in basket")
+
+        // A second tap that lands before the stepper replaces the button adds nothing.
+        await store.send(.addToBasketButtonTapped)
+    }
+
+    @Test func productAlreadyInTheBasketOpensOnItsStepperAndARefreshLeavesTheLineAlone() async {
+        let line = BasketLine(product: racket, quantity: 7)
+        @Shared(.basket) var basket
+        $basket.withLock { $0 = Basket(lines: [line]) }
+        // Stock has fallen below the minimum since the line was added.
+        let refreshed = Product(
+            id: 152, title: "Tennis Racket Pro", category: "sports-accessories", price: 55, stock: 3,
+            minimumOrderQuantity: 5
+        )
+        let store = TestStore(initialState: ProductDetailFeature.State(product: racket)) {
+            ProductDetailFeature()
+        } withDependencies: {
+            $0.continuousClock = TestClock()
+            $0.productsClient.product = { _ in refreshed }
+        }
+        #expect(store.state.basketControl == .inBasket(line), "The screen must open on the stepper, never on Add")
+        #expect(store.state.basketControl.title == "7 in basket")
+
+        await store.send(.onAppear) {
+            $0.refresh = .loading(isSlow: false)
+        }
+        await store.receive(\.refreshResponse) {
+            $0.product = refreshed
+            $0.refresh = .updated
+        }
+        #expect(store.state.basketControl == .inBasket(line), "A basket line wins over availability")
+        #expect(basket.lines == [line], "Only an add refreshes a line's snapshot")
+    }
+
+    @Test func notFoundDisablesTheControlEvenInTheBasketAndTheLineStays() async {
+        let line = BasketLine(product: racket, quantity: 6)
+        @Shared(.basket) var basket
+        $basket.withLock { $0 = Basket(lines: [line]) }
+        let store = TestStore(initialState: ProductDetailFeature.State(product: racket)) {
+            ProductDetailFeature()
+        } withDependencies: {
+            $0.continuousClock = TestClock()
+            $0.productsClient = .liveValue
+            $0.dataTransfer = StubDataTransfer.answering(404, Payloads.notFound)
+        }
+
+        await store.send(.onAppear) {
+            $0.refresh = .loading(isSlow: false)
+        }
+        await store.receive(\.refreshResponse) {
+            $0.refresh = .gone
+        }
+        #expect(store.state.basketControl == .gone, "Gone wins over the basket line")
+        #expect(store.state.basketControl.title == "This product is no longer available")
+
+        await store.send(.incrementButtonTapped)
+        await store.send(.removeButtonTapped)
+        #expect(basket.lines == [line], "The line stays for the Basket tab")
+    }
+
+    /// Refusals only: the cases of one parameterized test share a basket, so none of them may write to it.
+    @Test(arguments: [
+        (stock: 0, minimum: 5, title: "Out of stock"),
+        (stock: 3, minimum: 5, title: "Only 3 in stock — minimum order is 5"),
+    ])
+    func productThatCantBeAddedSaysWhyAndAddDoesNothing(stock: Int, minimum: Int, title: String) async {
+        let volleyball = Product(
+            id: 153, title: "Volleyball", category: "sports-accessories", price: 12, stock: stock,
+            minimumOrderQuantity: minimum
+        )
+        let store = TestStore(initialState: ProductDetailFeature.State(product: volleyball)) {
+            ProductDetailFeature()
+        }
+        #expect(store.state.basketControl.title == title)
+
+        await store.send(.addToBasketButtonTapped)
+    }
+
+    @Test func stepperMovesTheLineWithinMinimumAndStockAndDeleteBringsAddBack() async {
+        let lamp = Product(id: 7, title: "Lamp", category: "furniture", price: 20, stock: 3, minimumOrderQuantity: 1)
+        func holding(_ quantity: Int) -> Basket {
+            Basket(lines: [BasketLine(product: lamp, quantity: quantity)])
+        }
+        let store = TestStore(initialState: ProductDetailFeature.State(product: lamp)) {
+            ProductDetailFeature()
+        }
+        #expect(store.state.basketControl.title == "Add to basket")
+
+        await store.send(.addToBasketButtonTapped) { $0.$basket.withLock { $0 = holding(1) } }
+        await store.send(.incrementButtonTapped) { $0.$basket.withLock { $0 = holding(2) } }
+        await store.send(.incrementButtonTapped) { $0.$basket.withLock { $0 = holding(3) } }
+        await store.send(.incrementButtonTapped)
+        #expect(store.state.basketControl.title == "3 in basket", "+ stops at stock")
+
+        await store.send(.decrementButtonTapped) { $0.$basket.withLock { $0 = holding(2) } }
+        await store.send(.decrementButtonTapped) { $0.$basket.withLock { $0 = holding(1) } }
+        await store.send(.decrementButtonTapped)
+        #expect(store.state.basketControl.title == "1 in basket", "− never goes below the minimum")
+
+        await store.send(.removeButtonTapped) { $0.$basket.withLock { $0 = Basket() } }
+        #expect(store.state.basketControl.title == "Add to basket")
+        await store.send(.addToBasketButtonTapped) { $0.$basket.withLock { $0 = holding(1) } }
+    }
+
+    @Test func aChangeMadeInTheBasketTabShowsOnTheControlAtOnce() async {
+        let store = TestStore(initialState: ProductDetailFeature.State(product: racket)) {
+            ProductDetailFeature()
+        }
+        @Shared(.basket) var basketTab
+
+        $basketTab.withLock {
+            _ = $0.add(racket, quantity: 5)
+            $0.setQuantity(9, forProduct: 152)
+        }
+        #expect(store.state.basketControl.title == "9 in basket")
+
+        $basketTab.withLock { $0.removeAll() }
+        #expect(store.state.basketControl.title == "Add 5 to basket")
     }
 
     @Test func slowConnectionShowsAfterThreeSecondsOfRefreshAndGoesWhenTheRequestEnds() async {
@@ -107,27 +218,6 @@ struct ProductDetailFeatureTests {
         }
     }
 
-    @Test func notFoundMeansTheProductIsGoneAndNothingCanBeAdded() async {
-        let store = TestStore(initialState: ProductDetailFeature.State(product: racket)) {
-            ProductDetailFeature()
-        } withDependencies: {
-            $0.continuousClock = TestClock()
-            $0.productsClient = .liveValue
-            $0.dataTransfer = StubDataTransfer.answering(404, Payloads.notFound)
-        }
-
-        await store.send(.onAppear) {
-            $0.refresh = .loading(isSlow: false)
-        }
-        await store.receive(\.refreshResponse) {
-            $0.refresh = .gone
-        }
-        #expect(store.state.quantityRange == nil, "Adding must be disabled")
-
-        await store.send(.addToBasketButtonTapped)
-        #expect(store.state.basket.lines.isEmpty)
-    }
-
     @Test func serverErrorKeepsTheProductAddableAndNothingRetriesByItself() async {
         let transport = StubDataTransfer.answering(503, "")
         let store = TestStore(initialState: ProductDetailFeature.State(product: racket)) {
@@ -149,81 +239,8 @@ struct ProductDetailFeatureTests {
 
         await store.send(.addToBasketButtonTapped) {
             $0.$basket.withLock { $0 = Basket(lines: [BasketLine(product: self.racket, quantity: 5)]) }
-            $0.addOutcome = .added(quantity: 5)
         }
-    }
-
-    @Test func eachAddLandsInTheSharedBasketAndAddingPastStockIsCapped() async {
-        let lamp = Product(id: 7, title: "Lamp", category: "furniture", price: 20, stock: 7, minimumOrderQuantity: 2)
-        let store = TestStore(initialState: ProductDetailFeature.State(product: lamp)) {
-            ProductDetailFeature()
-        }
-        @Shared(.basket) var basketElsewhere
-        #expect(store.state.quantity == 2, "The stepper starts at the minimum order")
-        #expect(store.state.quantityRange == 2...7)
-
-        await store.send(.addToBasketButtonTapped) {
-            $0.$basket.withLock { $0 = Basket(lines: [BasketLine(product: lamp, quantity: 2)]) }
-            $0.addOutcome = .added(quantity: 2)
-        }
-        #expect(store.state.addMessage == "Added · 2 in basket")
-        #expect(basketElsewhere.line(forProduct: 7)?.quantity == 2)
-
-        await store.send(.binding(.set(\.quantity, 6))) {
-            $0.quantity = 6
-        }
-        await store.send(.addToBasketButtonTapped) {
-            $0.$basket.withLock { $0 = Basket(lines: [BasketLine(product: lamp, quantity: 7)]) }
-            $0.addOutcome = .capped(stock: 7)
-        }
-        #expect(store.state.addMessage == "Only 7 in stock")
-        #expect(basketElsewhere.line(forProduct: 7)?.quantity == 7)
-    }
-
-    @Test(arguments: [
-        (stock: 0, minimum: 1, title: "Out of stock"),
-        (stock: 3, minimum: 5, title: "Only 3 in stock — minimum order is 5"),
-    ])
-    func unorderableProductCannotBeAddedAndSaysWhy(stock: Int, minimum: Int, title: String) async {
-        let volleyball = Product(
-            id: 153, title: "Volleyball", category: "sports-accessories", price: 12, stock: stock,
-            minimumOrderQuantity: minimum
-        )
-        let store = TestStore(initialState: ProductDetailFeature.State(product: volleyball)) {
-            ProductDetailFeature()
-        }
-        store.exhaustivity = .off
-
-        #expect(store.state.addButtonTitle == title)
-        #expect(store.state.quantityRange == nil, "Adding must be disabled")
-
-        await store.send(.addToBasketButtonTapped)
-        #expect(store.state.basket.lines.isEmpty)
-        #expect(store.state.addMessage == nil)
-    }
-
-    @Test(arguments: Reclamp.cases)
-    func refreshThatMovesStockOrMinimumReclampsTheQuantity(_ reclamp: Reclamp) async {
-        let store = TestStore(initialState: ProductDetailFeature.State(product: reclamp.shown)) {
-            ProductDetailFeature()
-        } withDependencies: {
-            $0.continuousClock = TestClock()
-            $0.productsClient.product = { _ in reclamp.refreshed }
-        }
-        if let chosen = reclamp.chosen {
-            await store.send(.binding(.set(\.quantity, chosen))) {
-                $0.quantity = chosen
-            }
-        }
-
-        await store.send(.onAppear) {
-            $0.refresh = .loading(isSlow: false)
-        }
-        await store.receive(\.refreshResponse) {
-            $0.product = reclamp.refreshed
-            $0.refresh = .updated
-            $0.quantity = reclamp.expected
-        }
+        #expect(store.state.basketControl.title == "5 in basket")
     }
 
     @Test func leavingTheScreenCancelsItsRequest() async {
@@ -254,32 +271,5 @@ struct ProductDetailFeatureTests {
         // Fails if the request or the slow-hint timer is still running.
         await store.finish()
         #expect(cancelled.value, "The product request must not outlive the screen")
-    }
-
-    struct Reclamp: Sendable, CustomTestStringConvertible {
-        let testDescription: String
-        let shown: Product
-        let chosen: Int?
-        let refreshed: Product
-        let expected: Int
-
-        static let cases = [
-            Reclamp(
-                testDescription: "stock falls below the chosen quantity",
-                shown: lemon(stock: 20, minimum: 2), chosen: 15, refreshed: lemon(stock: 8, minimum: 2), expected: 8
-            ),
-            Reclamp(
-                testDescription: "minimum rises above the chosen quantity",
-                shown: lemon(stock: 20, minimum: 2), chosen: nil, refreshed: lemon(stock: 20, minimum: 5), expected: 5
-            ),
-            Reclamp(
-                testDescription: "an out-of-stock product comes back",
-                shown: lemon(stock: 0, minimum: 1), chosen: nil, refreshed: lemon(stock: 20, minimum: 4), expected: 4
-            ),
-        ]
-
-        private static func lemon(stock: Int, minimum: Int) -> Product {
-            Product(id: 31, title: "Lemon", category: "groceries", price: 1, stock: stock, minimumOrderQuantity: minimum)
-        }
     }
 }

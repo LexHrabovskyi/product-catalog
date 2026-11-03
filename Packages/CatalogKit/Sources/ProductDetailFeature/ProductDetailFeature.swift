@@ -4,6 +4,7 @@ import Foundation
 import Models
 import os
 import ProductsClient
+import SharedUI
 
 private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ProductCatalog", category: "detail")
 
@@ -12,15 +13,11 @@ public struct ProductDetailFeature {
     @ObservableState
     public struct State: Equatable {
         public var product: Product
-        public var quantity: Int
         public var refresh: Refresh = .notRequested
-        /// What the last "Add to basket" tap did, until the next tap.
-        public var addOutcome: Basket.AddOutcome?
         @Shared(.basket) public var basket
 
         public init(product: Product) {
             self.product = product
-            self.quantity = max(product.minimumOrderQuantity, 1)
         }
     }
 
@@ -33,13 +30,25 @@ public struct ProductDetailFeature {
         case gone
     }
 
-    public enum Action: BindableAction {
-        case binding(BindingAction<State>)
+    /// What the floating basket control shows.
+    public enum BasketControl: Equatable {
+        /// The catalog answered that the product no longer exists, even when it's in the basket.
+        case gone
+        /// A stepper on the product's basket line.
+        case inBasket(BasketLine)
+        /// "Add to basket" while the product can be added; otherwise the reason it can't.
+        case notInBasket(Basket.Availability)
+    }
+
+    public enum Action {
         case onAppear
         case retryButtonTapped
         case refreshResponse(Result<Product, CatalogError>)
         case slowHintTimerFired
         case addToBasketButtonTapped
+        case incrementButtonTapped
+        case decrementButtonTapped
+        case removeButtonTapped
     }
 
     enum CancelID {
@@ -53,7 +62,6 @@ public struct ProductDetailFeature {
     public init() {}
 
     public var body: some ReducerOf<Self> {
-        BindingReducer()
         Reduce { state, action in
             switch action {
             case .onAppear:
@@ -67,11 +75,7 @@ public struct ProductDetailFeature {
             case let .refreshResponse(.success(product)):
                 state.product = product
                 state.refresh = .updated
-                if let range = state.quantityRange {
-                    state.quantity = min(max(state.quantity, range.lowerBound), range.upperBound)
-                }
-                let quantity = state.quantity
-                logger.info("Product \(product.id) updated; quantity \(quantity)")
+                logger.info("Product \(product.id) updated")
                 return .cancel(id: CancelID.slowHint)
 
             case let .refreshResponse(.failure(error)):
@@ -93,18 +97,38 @@ public struct ProductDetailFeature {
                 return .none
 
             case .addToBasketButtonTapped:
-                guard state.refresh != .gone else { return .none }
+                // Adds the minimum once: from then on the product has a line, and the control is its stepper.
+                guard case let .notInBasket(.available(range)) = state.basketControl else { return .none }
                 let product = state.product
-                let quantity = state.quantity
-                let outcome = state.$basket.withLock { $0.add(product, quantity: quantity) }
-                state.addOutcome = outcome
-                logger.info("Adding \(quantity) of product \(product.id): \(String(describing: outcome), privacy: .public)")
+                let outcome = state.$basket.withLock { $0.add(product, quantity: range.lowerBound) }
+                logger.info("Adding product \(product.id) to the basket: \(String(describing: outcome), privacy: .public)")
                 return .none
 
-            case .binding:
+            case .incrementButtonTapped:
+                changeQuantity(&state, by: 1)
+                return .none
+
+            case .decrementButtonTapped:
+                changeQuantity(&state, by: -1)
+                return .none
+
+            case .removeButtonTapped:
+                guard case let .inBasket(line) = state.basketControl else { return .none }
+                state.$basket.withLock { $0.remove(productID: line.productID) }
+                logger.info("Removed product \(line.productID), quantity \(line.quantity), from the basket")
                 return .none
             }
         }
+    }
+
+    /// Steps the line's quantity within its minimum…stock; a step past either end does nothing.
+    private func changeQuantity(_ state: inout State, by step: Int) {
+        guard case let .inBasket(line) = state.basketControl, line.quantityRange.contains(line.quantity + step) else {
+            return
+        }
+        let quantity = line.quantity + step
+        state.$basket.withLock { $0.setQuantity(quantity, forProduct: line.productID) }
+        logger.info("Product \(line.productID) quantity \(line.quantity) → \(quantity)")
     }
 
     private func refresh(_ state: inout State) -> Effect<Action> {
@@ -130,27 +154,23 @@ public struct ProductDetailFeature {
 }
 
 extension ProductDetailFeature.State {
-    /// The quantities the stepper offers; `nil` while the product can't be added.
-    public var quantityRange: ClosedRange<Int>? {
-        guard refresh != .gone, case let .available(range) = Basket.availability(of: product) else { return nil }
-        return range
+    /// A gone product wins over its basket line, and a basket line wins over availability.
+    public var basketControl: ProductDetailFeature.BasketControl {
+        if refresh == .gone { return .gone }
+        if let line = basket.line(forProduct: product.id) { return .inBasket(line) }
+        return .notInBasket(Basket.availability(of: product))
     }
+}
 
-    public var addButtonTitle: String {
-        // A product that no longer exists has no stock worth quoting.
-        guard refresh != .gone else { return "Add to basket" }
-        return switch Basket.availability(of: product) {
-        case .available: "Add to basket"
-        case .outOfStock: "Out of stock"
-        case let .belowMinimumOrder(stock, minimum): "Only \(stock) in stock — minimum order is \(minimum)"
-        }
-    }
-
-    public var addMessage: String? {
-        switch addOutcome {
-        case let .added(quantity): "Added · \(quantity) in basket"
-        case let .capped(stock): "Only \(stock) in stock"
-        case .refused, nil: nil
+extension ProductDetailFeature.BasketControl {
+    /// The button's title, or the stepper's count.
+    public var title: String {
+        switch self {
+        case .gone: CatalogError.notFound.message
+        case let .inBasket(line): "\(line.quantity) in basket"
+        case let .notInBasket(.available(range)): range.lowerBound > 1 ? "Add \(range.lowerBound) to basket" : "Add to basket"
+        case .notInBasket(.outOfStock): "Out of stock"
+        case let .notInBasket(.belowMinimumOrder(stock, minimum)): "Only \(stock) in stock — minimum order is \(minimum)"
         }
     }
 }

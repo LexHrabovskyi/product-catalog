@@ -8,12 +8,15 @@ import UIKit
 public struct RemoteImage: View {
     private let url: URL?
     private let contentMode: ContentMode
+    private let priority: TaskPriority
     @State private var loaded: (url: URL, image: UIImage)? = nil
     @Dependency(\.dataTransfer) private var dataTransfer
 
-    public init(url: URL?, contentMode: ContentMode = .fill) {
+    /// `priority` orders this load against the loads that start with it.
+    public init(url: URL?, contentMode: ContentMode = .fill, priority: TaskPriority = .userInitiated) {
         self.url = url
         self.contentMode = contentMode
+        self.priority = priority
     }
 
     public var body: some View {
@@ -30,7 +33,7 @@ public struct RemoteImage: View {
             }
             .clipped()
             // Leaving the screen cancels the load.
-            .task(id: url) {
+            .task(id: url, priority: priority) {
                 guard let url, let image = await ImageLoader.shared.image(for: url, from: dataTransfer) else {
                     return
                 }
