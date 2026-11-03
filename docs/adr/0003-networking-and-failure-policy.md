@@ -55,3 +55,7 @@ Option 1.
 
 - Add one automatic retry for idempotent requests if production metrics show transient failures.
 - Add a disk image cache if image traffic matters.
+
+## Amendments
+
+- 2026-11-03 (D32): the detail gallery starts loading every image of the product when the screen opens, the first one first and at the highest priority, instead of loading each page as it's swiped to. List rows are unchanged: they load only while on screen and cancel when they leave it.

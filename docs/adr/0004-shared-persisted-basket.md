@@ -58,3 +58,7 @@ Option 1.
 
 - Re-sync a line's price and stock when its product is opened.
 - Add a versioned format before the first schema change.
+
+## Amendments
+
+- 2026-11-03 (D30, D33): the catalog toolbar no longer has a basket button, so the Basket tab's badge is the one indicator. The detail screen keeps no quantity of its own: its control edits the product's basket line directly. "Add to basket" adds the minimum, then a stepper changes the line's quantity and deletes the line at the minimum.

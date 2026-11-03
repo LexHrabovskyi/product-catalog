@@ -1,6 +1,6 @@
 # Technical Specification: Product catalog v1
 
-- Status: Confirmed by the operator, 2026-11-02. Clarified after PC-10's review: §6 scenario notes and AC-009's manual check (D22). AC-029 added by the operator (D25).
+- Status: Confirmed by the operator, 2026-11-02. Clarified after PC-10's review: §6 scenario notes and AC-009's manual check (D22). AC-029 added by the operator (D25). Amended after the operator's review on a device, 2026-11-03: AC-013, AC-014, AC-017, AC-019 to AC-023, AC-027, AC-029, A1 and A6 (D30–D35).
 - Date: 2026-11-02
 - Decisions: [decisions.md](../decisions.md) D1–D10; [ADR-0001](../adr/0001-tca-modular-architecture.md), [ADR-0002](../adr/0002-concurrency-isolation.md), [ADR-0003](../adr/0003-networking-and-failure-policy.md), [ADR-0004](../adr/0004-shared-persisted-basket.md)
 
@@ -33,7 +33,7 @@ A merchant runs their business from their phone. They need to find a product fas
 - iPad and iPhone Duo regular-width layouts (D8), landscape-specific layouts.
 - Localization beyond English; analytics SDKs; sign-in; deep links.
 - Sorting by stock (offered and declined).
-- Disk image cache, image prefetching, barcode or QR rendering.
+- Disk image cache, prefetching list images, barcode or QR rendering. Only the detail gallery loads ahead of what's on screen (D32).
 - Weight and dimensions: the API gives no units, so v1 doesn't show them.
 
 ## 5. User stories and flows
@@ -48,7 +48,7 @@ A merchant runs their business from their phone. They need to find a product fas
 2. Scroll: further pages load.
 3. Search, or pick a category and sort.
 4. Tap a row: the detail screen opens with the row's data, then refreshes.
-5. Pick a quantity and add the product to the basket.
+5. Add the product to the basket, then adjust its quantity on the same control.
 6. Open the Basket tab: review the lines, adjust quantities, see the totals.
 
 Leaving a screen cancels its requests. Retry is always explicit; nothing retries automatically.
@@ -136,13 +136,14 @@ In `journey`, `large` and `slow`, image requests get a generated image. In `jour
 | Offline, timeout, 5xx, other 4xx, unreadable data | Specific copy, caption "Error <status>" for HTTP failures (AC-006, AC-004) |
 | Permission denied | N/A: the app asks for no permissions |
 | Cancellation | Leaving a screen, a new query, category or sort, or a new refresh cancels the request it replaces. Cancellation is never shown or logged as an error. |
-| Repeated action | At most one next-page request in flight per list. Duplicate product ids are dropped when pages are appended. Each "Add to basket" tap adds once, capped at stock. |
+| Repeated action | At most one next-page request in flight per list. Duplicate product ids are dropped when pages are appended. "Add to basket" shows only while the product isn't in the basket, and a tap adds the minimum once. |
 | Maximum | 1,000+ rows render lazily, and image loads follow visible rows (AC-009). Quantity is capped at stock. Titles wrap to 2 lines in rows. |
 | Unknown availability label | Shown as-is in a neutral style (AC-010) |
 | Missing brand | The category is shown (AC-001) |
 | Missing or failed image | One large product symbol (`shippingbox`) on a neutral tile, the same for every product, never a broken image (AC-001, AC-017) |
 | Unreadable stored basket | Start empty, log a warning, don't crash (AC-024) |
 | Stock below minimum order | Adding is disabled with an explanation (AC-021) |
+| Product already in the basket | The detail screen opens on the stepper for its line, never on "Add to basket" (AC-020) |
 
 ## 8. Observability and privacy
 
@@ -180,35 +181,35 @@ In `journey`, `large` and `slow`, image requests get a generated image. In `jour
 ### Search, category and sort
 
 - [ ] **AC-012** Given the merchant types in "Search products", when typing pauses for 300 ms, then page 1 of the whole catalog's results for the trimmed query loads. A changed query cancels the previous query's request. Results page like the list. An empty or whitespace query returns to browsing.
-- [ ] **AC-013** Given a query is active, then the category control shows "All categories" and is disabled. When the query is cleared, browsing resumes with the previously selected category and the current sort.
-- [ ] **AC-014** Given the category menu opens, then it lists "All categories" plus the API's categories by name. Choosing one loads page 1 of that category with the current sort. If the categories request fails, the menu shows "Couldn't load categories" with "Retry", and the list keeps working.
+- [ ] **AC-013** Given a query is active, then the category filter is disabled and no category is selected: a search resets the category to "All categories". When the query is cleared, browsing resumes with the whole catalog and the current sort.
+- [ ] **AC-014** The category filter is an icon button at the top right of the catalog, next to sort: outlined while all categories are shown, filled while one is selected, and the selected category's name is the screen's subtitle. Its menu lists "All categories" plus the API's categories by name. Choosing one loads page 1 of that category with the current sort. If the categories request fails, the menu shows "Couldn't load categories" with "Retry", and the list keeps working.
 - [ ] **AC-015** The sort menu offers Default, "Price: low to high", "Price: high to low", "Title: A–Z" and "Rating: highest first". Changing it reloads page 1 for the current query or category and cancels any request in flight. The choice holds across search and category changes for the session.
 
 ### Detail
 
 - [ ] **AC-016** Given the merchant taps a row, then the detail screen opens showing that row's product immediately and requests `/products/{id}`. When the answer arrives, the screen updates in place.
 - [ ] **AC-017** The detail screen shows, in this order:
-  1. a swipeable gallery of the product's images with a page indicator, and placeholders for missing or failed images;
+  1. a swipeable gallery of the product's images with a page indicator, and placeholders for missing or failed images. Every image starts loading when the screen opens, the first one first and at the highest priority;
   2. title and brand, then price, discount and discounted price;
   3. rating (stars, average, review count);
-  4. description;
+  4. description, folded to 3 lines when it's longer, with "Show more" that expands it with an animation and turns into "Show less";
   5. inventory facts: stock badge, minimum order quantity, SKU, barcode, category, shipping, warranty, return policy, tags;
   6. reviews: name, date, stars and comment, never e-mail.
 
-  A bottom bar holds the quantity stepper and "Add to basket" (A6).
+  A floating basket control is pinned to the bottom (A6, AC-020).
 - [ ] **AC-018** Given the refresh fails for any reason except 404, then the shown data stays and an inline notice says "Couldn't update" with the code caption and "Retry".
-- [ ] **AC-019** Given the refresh returns 404, then the screen shows "This product is no longer available", and adding to the basket is disabled. Back navigation still works.
+- [ ] **AC-019** Given the refresh returns 404, then the basket control is disabled and reads "This product is no longer available", even when the product is in the basket; its line stays in the Basket tab. Back navigation still works.
 
 ### Basket
 
-- [ ] **AC-020** Given a product whose stock ≥ its minimum order quantity, then the stepper starts at the minimum and is bounded by stock. "Add to basket" adds that quantity. Adding a product already in the basket raises its quantity, capped at stock; when the cap applies, the screen says "Only N in stock".
-- [ ] **AC-021** Given stock is 0, then the button is disabled and reads "Out of stock". Given 0 < stock < the minimum, it's disabled and reads "Only N in stock — minimum order is M".
-- [ ] **AC-022** The Basket tab's badge shows the number of lines. The catalog's toolbar has a basket button with the same badge, and it switches to the Basket tab (A1). Every screen reads one shared basket, so a change anywhere shows everywhere at once.
+- [ ] **AC-020** Given a product that isn't in the basket and whose stock ≥ its minimum order quantity, then the basket control reads "Add to basket", or "Add N to basket" when the minimum N is above 1, and a tap adds the minimum. Given the product is in the basket, including when the screen opens, then the control is a stepper for its line that reads "N in basket": + and − change the quantity within the line's minimum…stock, and + is disabled at stock. At the minimum, − becomes a delete button that removes the line without confirmation, and "Add to basket" returns. A change in the Basket tab shows on the control at once. VoiceOver announces each add and removal.
+- [ ] **AC-021** Given a product that isn't in the basket and whose stock is 0, then the control is disabled and reads "Out of stock". Given 0 < stock < the minimum, it's disabled and reads "Only N in stock — minimum order is M".
+- [ ] **AC-022** The Basket tab's badge shows the number of lines (A1). The catalog's toolbar has no basket button. Every screen reads one shared basket, so a change anywhere shows everywhere at once.
 - [ ] **AC-023** The Basket tab:
   - lists each line with thumbnail, title, discounted unit price, a stepper bounded by minimum…stock, and the line total;
   - supports swipe to remove;
   - offers "Clear basket", which confirms first;
-  - shows "Subtotal", "Savings" and "Total";
+  - shows "Subtotal", "Savings" and "Total" in a panel pinned to the bottom, above the tab bar, in the same floating style as the detail screen's basket control; the lines scroll under it;
   - when empty, shows "Your basket is empty" and "Add products from the catalog."
 - [ ] **AC-024** Given the app quits and relaunches, then the basket comes back with the same lines and quantities. Given the stored basket can't be read, the app starts with an empty basket and logs a warning.
 
@@ -221,15 +222,16 @@ In `journey`, `large` and `slow`, image requests get a generated image. In `jour
   2. Scroll: page 2 arrives after a 2 s delay, with the footer spinner visible meanwhile.
   3. Scroll on: page 3 fails → the footer shows "Try again" instead of the spinner → "Try again" loads page 3.
   4. Scroll on normally: page 4 loads.
-  5. Open product A: its refresh fails → "Couldn't update" shows and adding still works → add A.
-  6. Open product B: it answers 404 → "This product is no longer available" shows and adding is disabled.
-  7. Open product C: it loads normally → add C.
-  8. The basket badge shows 2. The Basket tab lists A and C at their minimum quantities with the expected total.
+  5. Open product A: its refresh fails → "Couldn't update" shows and adding still works → add A → the control becomes the stepper at A's minimum.
+  6. Open product B: it answers 404 → the control is disabled and reads "This product is no longer available".
+  7. Open product C: it loads normally → add C → + raises it by one → − brings it back to the minimum → delete removes it and "Add to basket" returns → add C again.
+  8. Open product A again: the control is the stepper at A's minimum as soon as the screen opens.
+  9. The Basket tab's badge shows 2. The tab lists A and C at their minimum quantities with the expected total.
 - [ ] **AC-028** Release builds contain no scripted transport and no scenario handling. A Debug build launched without `-scenario` uses the live network and the real basket file.
 - [ ] **AC-029** UI journey, continued after AC-027's step 4. Same scenario, no network:
-  1. Choose the first category in the category menu: only that category's products are listed. Then choose "All categories" again.
-  2. Search "Product 11": after the debounce, exactly 11 products are listed (Product 11 and Product 110–119), and the category control shows "All categories" and is disabled.
-  3. Clear the search: browsing resumes with every product.
+  1. Choose the first category in the filter menu: only that category's products are listed, the filter shows as selected, and the category's name is the subtitle.
+  2. With the category still selected, search "Product 11": after the debounce, exactly 11 products are listed (Product 11 and Product 110–119), the filter is disabled, and no category is selected.
+  3. Clear the search: browsing resumes with every product, and no category is selected.
 
 ## 10. Architecture decisions
 
@@ -242,9 +244,9 @@ In `journey`, `large` and `slow`, image requests get a generated image. In `jour
 ## 11. Open questions and assumptions
 
 No open questions. These assumptions were confirmed by the operator on 2026-11-02:
-- **A1:** The badge counts lines. The basket button sits in the catalog toolbar *and* the Basket tab carries the same badge.
+- **A1:** The badge counts lines and sits on the Basket tab. The catalog toolbar has no basket button (D33).
 - **A2:** Products whose stock is below their minimum order can't be added (AC-021).
 - **A3:** A basket line keeps the product data from the moment it was added. Prices and stock in the basket aren't re-synced in v1, so the basket shows prices as of when the product was added.
 - **A4:** If the stored basket's format changes or the file is corrupt, the basket starts empty. v1 has no migration.
 - **A5:** Prices are USD; the API doesn't say.
-- **A6:** The detail screen's quantity stepper and "Add to basket" live in a bottom bar that's always visible.
+- **A6:** The detail screen's basket control floats at the bottom and is always visible: "Add to basket" until the product is in the basket, then the stepper for its line (D30).

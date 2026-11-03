@@ -10,12 +10,16 @@ How the work is cut, who runs it and where it stands. The session rules are in [
 | [PC-30](PC-30-product-detail.md) | Product detail and add to basket | `ProductDetailFeature/` | PC-01 | iPhone 17 Pro Max | done |
 | [PC-40](PC-40-basket-tab.md) | Basket tab | `BasketFeature/` | PC-01 | iPhone 17e | done |
 | [PC-50](PC-50-ui-journey.md) | UI journey and integration review | `Product catalogUITests/` | PC-10 to PC-40 | iPhone 17 Pro | done |
+| [PC-60](PC-60-detail-basket-control.md) | Detail: floating basket control, folded description, gallery preload | `ProductDetailFeature/`, `SharedUI/RemoteImage.swift` | PC-50 | iPhone 17 Pro Max | ready |
+| [PC-70](PC-70-catalog-filter-basket-totals.md) | Catalog filter and pinned basket totals | `ProductListFeature/`, `BasketFeature/`, the basket-button route in `AppFeature` | PC-50 | iPhone Air | ready |
+| [PC-80](PC-80-journey-update.md) | UI journey update and integration check | `Product catalogUITests/` | PC-60, PC-70 | iPhone 17 Pro | ready |
 
 Waves:
 1. PC-01.
 2. PC-10, PC-20, PC-30 and PC-40 in parallel, one worktree and one session each.
 3. PC-50.
 4. Close-out.
+5. The operator's review on a device (2026-11-03, D30–D35): PC-60 and PC-70 in parallel, then PC-80.
 
 Every review is its own session, never a subagent. The coordinator starts review sessions one at a time.
 
